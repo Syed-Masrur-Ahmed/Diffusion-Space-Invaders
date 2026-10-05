@@ -1,9 +1,9 @@
 # Environment
-gymnasium[atari]>=1.0.0
-ale-py>=0.9.0
+gymnasium[atari]
+ale-py
 
 # Play window and frame inspection
-pygame>=2.5
-opencv-python>=4.8
-matplotlib>=3.7
-numpy>=1.26
+pygame
+opencv-python
+matplotlib
+numpy
