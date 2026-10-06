@@ -1,1 +1,8 @@
 venv/
+.venv/
+/data/
+/runs/
+*.h5
+*.pt
+__pycache__/
+.pytest_cache/
