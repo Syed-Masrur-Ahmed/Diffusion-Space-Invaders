@@ -66,17 +66,26 @@ to see what already exists.
 
 ### 1.2 Done so far
 
-- Python `.venv` workflow with `requirements.txt` (gymnasium[atari], ale-py, pygame,
-  opencv-python, matplotlib, numpy) and a minimal `setup.sh` (create venv, upgrade pip,
-  install requirements).
-- `play.py`: keyboard play through Gymnasium's `play()` utility.
-- `play_v2.py`: custom pygame loop with a flicker-free display (max of the last two
-  frames), a Space-key latch so quick taps register, adjustable fps, and widened display
-  pixels. All of this is display and input only and does not touch data.
-- `inspect_frames.py`: compares raw 210×160 frames with 84 grey, 84 RGB, and 96 RGB
-  preprocessed frames. **Written; not yet run, so the resolution decision is still open.**
+The repo currently holds only `README.md`, `requirements.txt`, `setup.sh`, `play.py`,
+`.gitignore`, `CLAUDE.md`, and this file. There is no `wm/` package, `scripts/`, `tests/`,
+or `progress/` yet.
+
+- Python `.venv` workflow with an unpinned `requirements.txt` (gymnasium[atari], ale-py,
+  pygame, opencv-python, matplotlib, numpy). `setup.sh` requires `python3.13` (pygame
+  2.6.1 has no Python 3.14 macOS wheels), recreates `.venv` with `--clear`, upgrades pip,
+  and installs the requirements.
+- `play.py`: keyboard play through Gymnasium's `play()` utility on
+  `ALE/SpaceInvaders-v5` with `frameskip=1` and sticky actions off. Keys: Space = FIRE,
+  `d` = RIGHT, `a` = LEFT, plus the two combos; no-op when nothing is pressed; `zoom=2`,
+  60 fps. It has a `WideRender` wrapper meant to widen the display by 1.5×, but
+  `np.repeat` truncates the 1.5 to 1, so it currently does nothing.
 - The game boots and plays correctly. Confirmed by screenshot: the tall look comes from
   non-square Atari pixels and is not a bug.
+- **Not present (planned work, not yet written):** a flicker-free custom pygame player
+  (max of the last two frames, Space-key latch, adjustable fps, widened display) and a
+  frame-inspection script. Both are created from scratch in Phase 0 and CP1-A. The
+  resolution decision (D10) is still open.
+- `.gitignore` only lists `venv/`; Phase 0 extends it (`data/`, `runs/`, `*.h5`, `*.pt`, ...).
 
 ### 1.3 Decisions log
 
@@ -95,10 +104,13 @@ to see what already exists.
 | D11 | Default sampling steps and classifier-free guidance weight | Open, decided in CP4-C and CP5-C |
 | D12 | Training runs on Dartmouth's Discovery cluster (Slurm), with checkpoint and auto-resume so jobs survive time limits and queue waits | Final |
 | D13 | Track owners: A = Aunonto, B = Syed, C = Michael. Syed takes B because he is the only one with Discovery access (a change from the proposal's split). | Final |
+| D14 | Python 3.13 for the venv (pygame has no 3.14 wheels on macOS), enforced by `setup.sh` | Final |
 
 ### 1.4 Open questions
 
 - Discovery GPU partition, GPU type, memory, and the job time limit. Fill in here: ____
+- Does Discovery have a Python 3.13 module? `setup.sh` requires `python3.13`. If not, the
+  cluster setup needs its own path (pygame is only needed on laptops).
 - How much human play to record (target: at least 1 hour total, collected during CP3 to CP5).
 
 ### 1.5 Results log
@@ -547,8 +559,8 @@ class WorldModel(WorldModelProtocol):
   through Slurm batch jobs. Data collection and the play scripts can run on laptops.
   Partition names, GPU types, and time limits come from the Discovery documentation;
   record them in section 1.4 and keep them out of the code (pass them as `sbatch` options).
-- **Environment on the cluster:** load a Python module (3.10–3.12), create the `.venv`
-  with `setup.sh`, then install the CUDA build of PyTorch. Never import pygame from
+- **Environment on the cluster:** load a Python 3.13 module (`setup.sh` requires
+  `python3.13`), create the `.venv` with `setup.sh`, then install the CUDA build of PyTorch. Never import pygame from
   training or evaluation code, so jobs run headless.
 - **Job template** `scripts/slurm/train.sbatch`: requests one GPU, activates the venv,
   and runs `exec python scripts/train.py --config $CONFIG --resume auto`, writing logs to
@@ -591,10 +603,12 @@ Timeline, aligned with the proposal's schedule (term weeks):
 **Branch:** `cp0/skeleton`. **Owns:** everything it creates.
 
 Tasks:
-1. Create the layout from section 4.1. Move the existing scripts:
-   - `play.py` → `scripts/play_gym.py`
-   - `play_v2.py` → `scripts/play_real.py` (switch it to `wm.controls`)
-   - `inspect_frames.py` → `scripts/inspect_frames.py`
+1. Create the layout from section 4.1. Move and write the play scripts:
+   - Move `play.py` → `scripts/play_gym.py` (fix or drop its no-op `WideRender`, see section 1.2).
+   - Write `scripts/play_real.py` from scratch on `wm.env` and `wm.controls`: a custom pygame
+     loop showing the max-pooled frame (no flicker), `FireLatch` so quick Space taps register,
+     an `--fps` option, and ×2 horizontal widening for display only.
+   - `scripts/inspect_frames.py` is not created here; CP1-A writes it.
 2. Write `wm/data/schema.py` in full (action constants, source codes, end-reason codes, dataset names and dtypes, `SCHEMA_VERSION = 1`).
 3. Write `wm/controls.py` in full: `keys_to_action(left: bool, right: bool, fire: bool) -> int`
    (left and right together cancel out) and `ACTION_TO_MOVE_FIRE = {0:(0,0), 1:(0,1), 2:(1,0), 3:(2,0), 4:(1,1), 5:(2,1)}`,
@@ -609,7 +623,7 @@ Tests:
 - `keys_to_action` covers all 8 key combinations.
 - `make_env(0)` (marker `env`): reset obs is (210,160,3) uint8, and one step works.
 
-**Done when** the fast suite passes and `python scripts/play_real.py` still works. Tag `cp0`.
+**Done when** the fast suite passes and both `python scripts/play_gym.py` and `python scripts/play_real.py` are playable. Tag `cp0`.
 
 ---
 
@@ -621,7 +635,7 @@ Tests:
 Tasks:
 1. Harden `MaxPoolSkip` and `make_env` to match section 4.3 exactly (early termination, `info` fields, episode seed counter, truncation).
 2. Add the `"max"` method to `to_model_frame`.
-3. Rewrite `scripts/inspect_frames.py` on top of `wm.env`. It should produce `docs/figures/cp1_frames.png`, a grid of raw frames and {84, 96} × {area, max} × {RGB, grey} versions with 4× nearest upscaling, plus zoomed crops around the player's laser.
+3. Write `scripts/inspect_frames.py` (new; no earlier version exists) on top of `wm.env`. It should produce `docs/figures/cp1_frames.png`, a grid of raw frames and {84, 96} × {area, max} × {RGB, grey} versions with 4× nearest upscaling, plus zoomed crops around the player's laser.
 4. Write a **laser visibility check** (`scripts/inspect_frames.py --laser-stats`):
    - Run a seeded firing rollout of 300 steps.
    - Find the player-laser pixels in the raw max-pooled frame by their colour in the play area between the shields and the aliens (calibrate the colour once by frame differencing right after FIRE, and record it in the script).
