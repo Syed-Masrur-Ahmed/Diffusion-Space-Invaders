@@ -86,6 +86,7 @@ None. Phase 0 has no numbers.
 None.
 
 ## Follow-ups
+- **iCloud breaks the `wm` install on macOS:** in an iCloud-synced folder (`~/Documents` with Desktop & Documents sync), iCloud sets `UF_HIDDEN` on everything in `.venv`. Python 3.13's `site` skips hidden `.pth` files, so the editable install of `wm` stops loading (`No module named 'wm'`). Fix: keep the repo outside iCloud. This is in the README.
 - **SDL2 duplicate on macOS:** opencv-python 5.0 bundles its own `libSDL2`, and so do the headless and 4.x wheels. `play_real.py` loads it alongside pygame's copy, through `wm.env` → cv2. objc warns "Class SDLApplication is implemented in both … may cause spurious casting failures and mysterious crashes". The headless test runs cleanly. The human playtest should watch for crashes. If one shows up, the likely fix is to load cv2 lazily, so it isn't imported for display-only scripts.
 - **For CP1-A:**
   - ALE v5 also caps an episode at `max_num_frames_per_episode=108000` emulator frames, which is the same as 27,000 agent steps. Reset no-ops count toward that cap, so the ALE can truncate up to 8 agent steps before our `TimeLimit` does. Either way the episode ends with `truncated=True`. Decide whether this matters for `end_reason`.

@@ -7,6 +7,11 @@ and `CLAUDE.md` for how to work in this repo.
 
 Requires `python3.13` (pygame has no Python 3.14 wheels on macOS).
 
+**macOS:** keep the repo outside iCloud-synced folders (`~/Documents`, `~/Desktop` when
+"Desktop & Documents" sync is on). iCloud sets the hidden flag on files in `.venv`, Python 3.13
+then skips the `.pth` file that makes `wm` importable, and scripts fail with
+`No module named 'wm'`.
+
 ```bash
 bash setup.sh                  # creates .venv and installs requirements.txt (including the wm package)
 source .venv/bin/activate
