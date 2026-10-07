@@ -43,7 +43,7 @@ to see what already exists.
 | Checkpoint | Workflow | Branch | Owner | Status |
 |---|---|---|---|---|
 | Pre | Environment boots, game playable | `main` | all | DONE |
-| P0 | Repo skeleton and frozen interfaces | `cp0/skeleton` | (one person) | TODO |
+| P0 | Repo skeleton and frozen interfaces | `cp0/skeleton` | Syed | DONE |
 | CP1 | A: Environment module and resolution decision | `cp1/A-env` | Aunonto | TODO |
 | CP1 | B: HDF5 storage (writer, reader, validator) | `cp1/B-storage` | Syed | TODO |
 | CP1 | C: Policies (pretrained agent, random, epsilon mix) | `cp1/C-policies` | Michael | TODO |
@@ -66,26 +66,37 @@ to see what already exists.
 
 ### 1.2 Done so far
 
-The repo currently holds only `README.md`, `requirements.txt`, `setup.sh`, `play.py`,
-`.gitignore`, `CLAUDE.md`, and this file. There is no `wm/` package, `scripts/`, `tests/`,
-or `progress/` yet.
+**Phase 0 (tag `cp0`, details in `progress/cp0.md`):**
 
-- Python `.venv` workflow with an unpinned `requirements.txt` (gymnasium[atari], ale-py,
-  pygame, opencv-python, matplotlib, numpy). `setup.sh` requires `python3.13` (pygame
-  2.6.1 has no Python 3.14 macOS wheels), recreates `.venv` with `--clear`, upgrades pip,
-  and installs the requirements.
-- `play.py`: keyboard play through Gymnasium's `play()` utility on
-  `ALE/SpaceInvaders-v5` with `frameskip=1` and sticky actions off. Keys: Space = FIRE,
-  `d` = RIGHT, `a` = LEFT, plus the two combos; no-op when nothing is pressed; `zoom=2`,
-  60 fps. It has a `WideRender` wrapper meant to widen the display by 1.5×, but
-  `np.repeat` truncates the 1.5 to 1, so it currently does nothing.
-- The game boots and plays correctly. Confirmed by screenshot: the tall look comes from
-  non-square Atari pixels and is not a bug.
-- **Not present (planned work, not yet written):** a flicker-free custom pygame player
-  (max of the last two frames, Space-key latch, adjustable fps, widened display) and a
-  frame-inspection script. Both are created from scratch in Phase 0 and CP1-A. The
-  resolution decision (D10) is still open.
-- `.gitignore` only lists `venv/`; Phase 0 extends it (`data/`, `runs/`, `*.h5`, `*.pt`, ...).
+- `wm/` package with the full layout from 4.1, installed in editable mode (`pyproject.toml`
+  plus `-e .` at the end of `requirements.txt`) so scripts can `import wm`.
+- Implemented in full: `wm/data/schema.py`, `wm/controls.py` (`keys_to_action`,
+  `ACTION_TO_MOVE_FIRE`, `FireLatch`), `wm/config.py` (`load_config` with `--set`
+  overrides, `from_dict`; `2e-4`-style floats parse correctly).
+- `wm/env.py` first working version: seeded no-op reset, `MaxPoolSkip`, time limit,
+  `to_model_frame("area")`, `to_agent_obs`, `AgentObsStack`. `method="max"` still raises
+  (CP1-A).
+- Every other `wm/` module is a stub. `[FROZEN]` signatures exist and raise
+  `NotImplementedError`. Config dataclass fields that the roadmap doesn't fix are listed in
+  the progress note; owning workflows may change them.
+- `scripts/play_gym.py` (the old `play.py`; `WideRender` now widens ×2) and
+  `scripts/play_real.py` (custom pygame loop on `wm.env`: max-pooled frames, `FireLatch`,
+  `--fps/--seed/--scale`, ×2 display widening, R resets, Esc quits).
+- `tests/`: `conftest.py` (SDL dummy driver, gpu auto-skip), `fixtures.py`
+  (`TinyDenoiserNet` in full, `make_fake_shard` stub for CP1-B), and a fast suite of 26
+  tests.
+- `.gitignore` anchors `/data/` and `/runs/` to the repo root (unanchored, they also
+  ignored `wm/data/` and `configs/data/`).
+
+**Carried over to CP1:**
+
+- CP1-A: ALE v5 also caps episodes at 108,000 emulator frames (= 27,000 agent steps), and
+  reset no-ops count toward it, so the ALE can truncate a few steps before our
+  `TimeLimit`. Decide whether this matters for `end_reason`.
+- On macOS, opencv bundles its own `libSDL2` next to pygame's (objc duplicate-class
+  warning). No crash seen yet; if one appears, import cv2 lazily in `wm/env.py`.
+- Keep the repo outside iCloud-synced folders. iCloud sets `UF_HIDDEN` on `.venv` files and
+  Python 3.13 then skips the editable-install `.pth`, so `import wm` fails (see README).
 
 ### 1.3 Decisions log
 
@@ -105,6 +116,7 @@ or `progress/` yet.
 | D12 | Training runs on Dartmouth's Discovery cluster (Slurm), with checkpoint and auto-resume so jobs survive time limits and queue waits | Final |
 | D13 | Track owners: A = Aunonto, B = Syed, C = Michael. Syed takes B because he is the only one with Discovery access (a change from the proposal's split). | Final |
 | D14 | Python 3.13 for the venv (pygame has no 3.14 wheels on macOS), enforced by `setup.sh` | Final |
+| D15 | `wm` is installed as an editable package (`pyproject.toml`, `-e .` in `requirements.txt`); dependencies stay in `requirements.txt` | Final |
 
 ### 1.4 Open questions
 
@@ -119,7 +131,7 @@ The integrator adds rows at each checkpoint.
 
 | Date | Checkpoint | Result |
 |---|---|---|
-| | | |
+| 2026-10-07 | P0 | Fast suite 26 passed; `env` tests 4 passed (macOS arm64, CPU, Python 3.13.2). Same seed and actions give identical frames. |
 
 ---
 
@@ -216,7 +228,7 @@ the next checkpoint.
 ### 4.1 Repository layout
 
 ```
-ROADMAP.md  README.md  requirements.txt  setup.sh  pytest.ini  .gitignore
+ROADMAP.md  README.md  requirements.txt  setup.sh  pyproject.toml  pytest.ini  .gitignore
 wm/                              # the python package ("world model")
   __init__.py
   config.py                      # dataclass + YAML config loading
@@ -263,6 +275,7 @@ scikit-image>=0.22
 lpips>=0.1.4
 imageio[ffmpeg]>=2.34
 tensorboard>=2.15
+-e .                     # installs the wm package (pyproject.toml)
 ```
 
 **PyTorch is installed separately**, using the command for the machine's CUDA version from
