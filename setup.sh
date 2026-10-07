@@ -12,5 +12,3 @@ fi
 python3.13 -m venv --clear .venv
 .venv/bin/pip install --upgrade pip
 .venv/bin/pip install -r requirements.txt
-# Makes `wm` importable when running scripts/*.py.
-.venv/bin/pip install -e .

@@ -15,3 +15,6 @@ scikit-image>=0.22
 lpips>=0.1.4
 imageio[ffmpeg]>=2.34
 tensorboard>=2.15
+
+# This repo's own package, so scripts/*.py can import wm (needs pyproject.toml).
+-e .

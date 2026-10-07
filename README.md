@@ -8,7 +8,7 @@ and `CLAUDE.md` for how to work in this repo.
 Requires `python3.13` (pygame has no Python 3.14 wheels on macOS).
 
 ```bash
-bash setup.sh                  # creates .venv, installs requirements.txt and the wm package
+bash setup.sh                  # creates .venv and installs requirements.txt (including the wm package)
 source .venv/bin/activate
 ```
 

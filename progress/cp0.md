@@ -5,7 +5,7 @@
 - Every other `wm/` module is a stub. Modules with `[FROZEN]` interfaces have the signatures, and their bodies raise `NotImplementedError`. Modules without one only have a docstring naming the owning workflow.
 - `tests/` has `conftest.py` (skips gpu tests without CUDA; sets the SDL dummy driver), `fixtures.py` (`TinyDenoiserNet` in full, `make_fake_shard` stub), and a fast suite that runs in about 2 s.
 - Play scripts: `play.py` moved to `scripts/play_gym.py`. `scripts/play_real.py` is new, built on `wm.env` and `wm.controls`.
-- `pyproject.toml` with `pip install -e .` in `setup.sh`, so `python scripts/<x>.py` can import `wm`.
+- `pyproject.toml`, plus `-e .` at the end of `requirements.txt`, so `python scripts/<x>.py` can import `wm`.
 
 ## Files
 Created:
@@ -22,9 +22,8 @@ Created:
 
 Modified or moved:
 - `play.py` → `scripts/play_gym.py` (WideRender fix)
-- `requirements.txt` (exact list from 4.2)
+- `requirements.txt` (exact list from 4.2, plus `-e .` for the `wm` package)
 - `.gitignore`, `README.md`
-- `setup.sh` (one line added: `pip install -e .`)
 
 ## Tests
 Added:
@@ -80,7 +79,7 @@ None. Phase 0 has no numbers.
   - `EPISODE_FIELDS` maps name → dtype.
   - The file also holds the other 4.4 constants (`FILE_ATTRS`, chunking, compression, flush size, `MAX_ROWS`, `EPISODE_UID_STRIDE`) and the seed bases `EVAL_SEED_BASE` (CP2-A) and `HUMAN_SEED_BASE` (CP3-A).
 - **`.gitignore` uses `/data/` and `/runs/`, anchored to the repo root.** An unanchored `data/` also ignored `wm/data/` and `configs/data/`. Also added: `*.egg-info/`.
-- **Added `pyproject.toml` and `pip install -e .` in `setup.sh`.** Without them `python scripts/play_real.py` cannot import `wm`, because Python puts `scripts/` on `sys.path`, not the repo root. Dependencies stay in `requirements.txt`. `pytest.ini` also sets `pythonpath = .`, so tests work without the install.
+- **Added `pyproject.toml` and an `-e .` line at the end of `requirements.txt`.** `setup.sh` is unchanged. Without them `python scripts/play_real.py` cannot import `wm`, because Python puts `scripts/` on `sys.path`, not the repo root. Dependencies stay in `requirements.txt`. `pytest.ini` also sets `pythonpath = .`, so tests work without the install.
 - **`play_real.py` takes `--fps`, `--seed`, and `--scale`, not `--config`/`--set`.** It has no configurable parameters beyond these.
 
 ## Interface change requests
