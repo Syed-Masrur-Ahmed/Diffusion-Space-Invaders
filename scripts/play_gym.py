@@ -1,3 +1,5 @@
+"""Plain Gymnasium player: every emulator frame, no max-pooling (reference for scripts/play_real.py)."""
+
 import numpy as np
 import gymnasium as gym
 import ale_py
@@ -7,8 +9,10 @@ gym.register_envs(ale_py)
 
 
 class WideRender(gym.Wrapper):
+    """Doubles the rendered width so Atari's wide pixels look right. Display only."""
+
     def render(self):
-        return np.repeat(self.env.render(), 1.5, axis=1)
+        return np.repeat(self.env.render(), 2, axis=1)
 
 
 env = gym.make(
