@@ -44,9 +44,9 @@ to see what already exists.
 |---|---|---|---|---|
 | Pre | Environment boots, game playable | `main` | all | DONE |
 | P0 | Repo skeleton and frozen interfaces | `cp0/skeleton` | Syed | DONE |
-| CP1 | A: Environment module and resolution decision | `cp1/A-env` | Aunonto | TODO |
-| CP1 | B: HDF5 storage (writer, reader, validator) | `cp1/B-storage` | Syed | TODO |
-| CP1 | C: Policies (pretrained agent, random, epsilon mix) | `cp1/C-policies` | Michael | TODO |
+| CP1 | A: Environment module and resolution decision | `cp1/A-env` | Aunonto | DONE |
+| CP1 | B: HDF5 storage (writer, reader, validator) | `cp1/B-storage` | Syed | DONE |
+| CP1 | C: Policies (pretrained agent, random, epsilon mix) | `cp1/C-policies` | Michael | DONE |
 | CP2 | A: Collector, debug and eval datasets, coverage report | `cp2/A-collect` | Aunonto | TODO |
 | CP2 | B: PyTorch window dataset and loader | `cp2/B-dataset` | Syed | TODO |
 | CP2 | C: EDM core and sampler | `cp2/C-edm` | Michael | TODO |
@@ -88,11 +88,36 @@ to see what already exists.
 - `.gitignore` anchors `/data/` and `/runs/` to the repo root (unanchored, they also
   ignored `wm/data/` and `configs/data/`).
 
-**Carried over to CP1:**
+**CP1 (tag `cp1`, details in `progress/cp1-A.md`, `cp1-B.md`, `cp1-C.md`):**
 
-- CP1-A: ALE v5 also caps episodes at 108,000 emulator frames (= 27,000 agent steps), and
-  reset no-ops count toward it, so the ALE can truncate a few steps before our
-  `TimeLimit`. Decide whether this matters for `end_reason`.
+- `wm/env.py`: `to_model_frame(method="max")` added (torch imported lazily). `MaxPoolSkip`
+  and `make_env` already matched 4.3 and are now pinned down by 31 tests in `test_env.py`.
+  The ALE's own 108,000-frame cap reports `truncated=True`, so it maps to
+  `end_reason = truncated` like our `TimeLimit` (resolves the cp0 carry-over).
+- `scripts/inspect_frames.py`: `docs/figures/cp1_frames.png` and `--laser-stats`. The
+  player laser and alien bullets share colour (142,142,142); the laser is drawn only on even
+  emulator frames, bullets only on odd ones. Without the max-pool, the laser is invisible
+  for the whole of every episode with an odd no-op count.
+- `wm/data/writer.py` (`ShardWriter`), `wm/data/reader.py` (`list_shards`, lazy picklable
+  `ShardReader`), `scripts/validate_data.py` (all 4.4 invariants plus statistics), and
+  `make_fake_shard` in full with `encode_frame`/`decode_frame` helpers in `tests/fixtures.py`.
+  Writer behaviour not fixed by 4.4: `close()` with an open episode warns and discards it;
+  shards open with `"w-"` (never overwrite); caller must pass all non-writer attrs.
+- `wm/agents/`: `RandomPolicy`, `EpsilonMixPolicy`, `ZooAgentPolicy`
+  (`sb3/ppo-SpaceInvadersNoFrameskip-v4`, obs `(4,84,84)`; a legacy-`gym` unpickling shim,
+  no `gym` dependency). `scripts/eval_agent.py` prints the score table.
+- `scripts/smoke_cp1.py` (integration): ε=0.2 agent, 2 episodes capped at 500 steps, 84/max
+  shard plus a 4× frame grid. `validate_data.py` passes.
+
+**Carried over to CP2:**
+
+- CP2-A: the collector config (`configs/data/*.yaml`) sets `resolution: 84` and
+  `resize_method: max` (D10). Call `policy.reset(seed, obs)` and then `act(obs)` on that
+  same obs; do not push the reset frame twice.
+- CP2-B: `ShardReader.read` with scattered index arrays uses slow h5py fancy indexing over
+  lzf chunks. Read a contiguous `i-K..i` slice per window, or load in memory.
+- CP2-B: `make_fake_shard(path, ...)` takes an output **directory** and returns the shard
+  path; lengths are in rows. Fake-data formulas for alignment tests are in `progress/cp1-B.md`.
 - On macOS, opencv bundles its own `libSDL2` next to pygame's (objc duplicate-class
   warning). No crash seen yet; if one appears, import cv2 lazily in `wm/env.py`.
 - Keep the repo outside iCloud-synced folders. iCloud sets `UF_HIDDEN` on `.venv` files and
@@ -111,12 +136,13 @@ to see what already exists.
 | D7 | Pixel-space diffusion (no VAE), unlike GameNGen. 84×84 frames are small enough. | Proposed in roadmap |
 | D8 | Store RAM (128 bytes) per step for coverage stats and detector calibration. Never used as model input. | Proposed in roadmap |
 | D9 | Ground truth for rollouts comes from deterministic replay (seed, no-op count, actions). | Proposed in roadmap |
-| D10 | Resolution (84 or 96) and resize method (area or max) | **Open, decided in CP1-A** |
+| D10 | 84×84, `method="max"`. `area` keeps the laser in only 65.5% of frames at 84 and 96; `max` keeps 100% at both. 96/max keeps more alien shape (84/max turns aliens into blocks) and stays an option if sprite detail matters. | Final (CP1-A) |
 | D11 | Default sampling steps and classifier-free guidance weight | Open, decided in CP4-C and CP5-C |
 | D12 | Training runs on Dartmouth's Discovery cluster (Slurm), with checkpoint and auto-resume so jobs survive time limits and queue waits | Final |
 | D13 | Track owners: A = Aunonto, B = Syed, C = Michael. Syed takes B because he is the only one with Discovery access (a change from the proposal's split). | Final |
 | D14 | Python 3.13 for the venv (pygame has no 3.14 wheels on macOS), enforced by `setup.sh` | Final |
 | D15 | `wm` is installed as an editable package (`pyproject.toml`, `-e .` in `requirements.txt`); dependencies stay in `requirements.txt` | Final |
+| D16 | Pretrained agent: `sb3/ppo-SpaceInvadersNoFrameskip-v4` (PPO, CPU, `deterministic=False`). Scores over 5 seeds: agent 1041 ± 264, ε=0.2 596 ± 137, ε=0.3 291 ± 180, random 139 ± 62. | Final (CP1-C) |
 
 ### 1.4 Open questions
 
@@ -124,6 +150,8 @@ to see what already exists.
 - Does Discovery have a Python 3.13 module? `setup.sh` requires `python3.13`. If not, the
   cluster setup needs its own path (pygame is only needed on laptops).
 - How much human play to record (target: at least 1 hour total, collected during CP3 to CP5).
+- Intel Macs: PyTorch has no Intel-Mac wheels that support Python 3.13 (CP1-A used 3.12 +
+  torch 2.2.2 + `numpy<2`). Support that setup, or use those machines only with the cluster?
 
 ### 1.5 Results log
 
@@ -132,6 +160,9 @@ The integrator adds rows at each checkpoint.
 | Date | Checkpoint | Result |
 |---|---|---|
 | 2026-10-07 | P0 | Fast suite 26 passed; `env` tests 4 passed (macOS arm64, CPU, Python 3.13.2). Same seed and actions give identical frames. |
+| 2026-10-16 | CP1 | Fast suite 85 passed; `slow or network or env` 13 passed (macOS arm64, CPU, Python 3.13.2, ale-py 0.12.1). Laser visibility: 84/max and 96/max 100%, 84/area and 96/area 65.5%, raw single frame 50% (re-run on ale-py 0.12.1 matches CP1-A's 0.10.2 numbers). D10 = 84/max. |
+| 2026-10-16 | CP1 | Agent scores (5 seeds): agent 1041 ± 264, ε=0.2 596 ± 137, ε=0.3 291 ± 180, random 139 ± 62. Writer 54,886 rows/s at 84×84 (fake frames). |
+| 2026-10-16 | CP1 | `smoke_cp1.py`: 2 episodes × 501 rows at 84/max, 1,031 rows/s end to end (env + agent bound), 1.73 MiB, compression ratio 11.7. `validate_data.py` OK. 20-frame visual check: laser visible, frames square, not aspect-corrected. |
 
 ---
 
