@@ -79,7 +79,13 @@ def to_model_frame(raw: np.ndarray, size: int, method: str = "area") -> np.ndarr
     if method == "area":
         return cv2.resize(raw, (size, size), interpolation=cv2.INTER_AREA)  # cv2 takes (W, H)
     if method == "max":
-        raise NotImplementedError("method='max' is added in CP1-A")
+        import torch  # lazy: only "max" needs torch, and the play scripts shouldn't pay for importing it
+
+        # Max-pooling keeps one-pixel bright objects (lasers) that area averaging dims. Float
+        # because the CPU max-pool has no uint8 kernel; uint8 -> float32 -> uint8 is exact.
+        chw = torch.from_numpy(raw).permute(2, 0, 1).float()
+        pooled = torch.nn.functional.adaptive_max_pool2d(chw, (size, size))
+        return pooled.permute(1, 2, 0).to(torch.uint8).contiguous().numpy()
     raise ValueError(f"unknown resize method {method!r}")
 
 
