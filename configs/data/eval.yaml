@@ -1,0 +1,19 @@
+# Held-out rollout trajectories (ROADMAP CP2-A, 4.4): ~100 episodes of at most 400 steps.
+# python scripts/collect.py --config configs/data/eval.yaml --workers 2
+out_dir: data/eval
+resolution: 84          # D10
+resize_method: max      # D10
+base_seed: 1000000000   # EVAL_SEED_BASE: never overlaps training seeds
+max_episode_steps: 400
+total_steps: null       # set exactly one of total_steps / total_episodes
+total_episodes: 100
+max_rows: 100000
+jobs:
+  - name: agent_eps0.2
+    policy: agent       # agent | random
+    epsilon: [0.2, 0.2] # drawn uniformly per episode; ignored for random
+    fraction: 0.7
+  - name: random
+    policy: random
+    epsilon: null
+    fraction: 0.3

@@ -1,0 +1,23 @@
+# Debug training set (ROADMAP CP2-A): ~500k agent steps.
+# python scripts/collect.py --config configs/data/debug.yaml --workers 4
+out_dir: data/debug
+resolution: 84          # D10
+resize_method: max      # D10
+base_seed: 0            # training seeds stay below EVAL_SEED_BASE (1e9)
+max_episode_steps: 27000
+total_steps: 500000     # set exactly one of total_steps / total_episodes
+total_episodes: null
+max_rows: 100000
+jobs:
+  - name: agent_eps0.2
+    policy: agent       # agent | random
+    epsilon: [0.2, 0.2] # drawn uniformly per episode; ignored for random
+    fraction: 0.5
+  - name: agent_eps0.3
+    policy: agent
+    epsilon: [0.3, 0.3]
+    fraction: 0.25
+  - name: random
+    policy: random
+    epsilon: null
+    fraction: 0.25
