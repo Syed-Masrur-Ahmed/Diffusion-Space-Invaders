@@ -1,0 +1,17 @@
+# Teacher-forced single-step evaluation on the val split (ROADMAP 4.11, CP3-A).
+# python scripts/eval_single_step.py --config configs/eval/single_step.yaml --model copy_last
+# python scripts/eval_single_step.py --config configs/eval/single_step.yaml --model runs/<run>/checkpoints/ckpt_last.pt
+model: copy_last        # copy_last | path to a training checkpoint (--model overrides)
+n: 2048                 # val windows, spread evenly over the split (--n overrides)
+data:
+  dataset_dirs: [data/debug]
+  K: 4                  # copy_last only; a checkpoint's own K and C are used otherwise
+  grayscale: false      # copy_last only
+  val_fraction: 0.05    # must match training (4.5)
+  batch_size: 128
+  num_workers: 2
+metrics: [psnr, ssim, lpips]
+out_dir: runs/eval_single_step   # results go to <out_dir>/<model tag>/
+seed: 0                 # sampler generator seed
+num_steps: null         # sampler steps; null = the model's default
+cfg_scale: null         # action CFG weight; null = the model's default
