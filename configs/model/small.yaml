@@ -1,0 +1,10 @@
+# U-Net "small" (ROADMAP 4.7). UNetConfig fields except C, K, H, which come from the data.
+# Build with wm.models.unet.unet_config(load_config(path), C, K, H); `ch` is picked by H.
+ch:
+  84: [64, 128, 256]         # 84 -> 42 -> 21; 14.3M parameters at C=3, K=4
+  96: [64, 128, 256, 256]    # 96 -> 48 -> 24 -> 12; 22.9M
+n_res: 2
+emb_dim: 256
+n_levels: 10
+attn_lowest: false
+dropout: 0.0
