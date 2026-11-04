@@ -50,9 +50,9 @@ to see what already exists.
 | CP2 | A: Collector, debug and eval datasets, coverage report | `cp2/A-collect` | Aunonto | DONE |
 | CP2 | B: PyTorch window dataset and loader | `cp2/B-dataset` | Syed | DONE |
 | CP2 | C: EDM core and sampler | `cp2/C-edm` | Michael | DONE |
-| CP3 | A: Metrics, baselines, visualization, human recorder | `cp3/A-eval` | Aunonto | TODO |
-| CP3 | B: Trainer | `cp3/B-trainer` | Syed | TODO |
-| CP3 | C: U-Net denoiser | `cp3/C-unet` | Michael | TODO |
+| CP3 | A: Metrics, baselines, visualization, human recorder | `cp3/A-eval` | Aunonto | DONE |
+| CP3 | B: Trainer | `cp3/B-trainer` | Syed | DONE |
+| CP3 | C: U-Net denoiser | `cp3/C-unet` | Michael | DONE |
 | CP4 | A: Autoregressive rollouts and horizon evaluation | `cp4/A-rollout` | Aunonto | TODO |
 | CP4 | B: Context noise augmentation runs | `cp4/B-noiseaug` | Syed | TODO |
 | CP4 | C: Inference engine and sampler benchmarks | `cp4/C-inference` | Michael | TODO |
@@ -127,29 +127,62 @@ to see what already exists.
 - `scripts/smoke_cp2.py` (integration): `make_dataloader` over `data/debug/` into
   `EDMDenoiser(TinyDenoiserNet)`, 200 CPU steps, checks finite and decreasing loss.
 
-**Carried over to CP3:**
+**CP3 (merged 2026-11-04, details in `progress/cp3-A.md`, `cp3-B.md`, `cp3-C.md`; integration checks pending, see 1.5):**
 
-- CP3-B: call `per, sigma = edm.loss_terms(...)`, `loss = per.mean()`, and log
-  `loss_by_sigma(per, sigma)`. Pass `WindowDataset` batches as they are (5-D context is
-  flattened inside). Action dropout and context noise are the trainer's job. For sample
-  grids, call `sample(ema_denoiser.eval(), ...)`; `sample` only applies `no_grad`. Copy the
-  `edm:` and `sampler:` blocks from `configs/train/edm_default.yaml` into `debug.yaml`.
-- CP3-B: exact resume needs the global torch RNG restored (σ and ε are drawn from it).
-  Use the lazy loader with 4–8 workers (3.8k–6k samples/s on an M-series laptop);
-  `in_memory` on `data/debug/` needs ~10.6 GB per split. Build each loader once per run
-  (`persistent_workers`). Nest `DataConfig` in the train config or duck-type its fields.
-- CP3-B: `data/debug/` and `data/eval/` are not in git. Regenerate with
-  `python scripts/collect.py --config configs/data/{debug,eval}.yaml --workers {4,2}`
-  (keep `--workers` the same as the original run so writer ids and seeds match), then copy
-  to Discovery scratch. Agent actions can differ across torch builds, so datasets from
-  different machines are equally valid but not byte-identical.
-- CP3-A: `data/eval/` episodes all have ≥ 262 rows, enough for K + 200 horizon.
+- `wm/eval/metrics.py`: per-image `psnr` (capped at 100 dB), `ssim`, `lpips` (alex, lazy and
+  cached per device) on [0,1] `(N,C,H,W)`. `wm/eval/baselines.py`: `CopyLastFrame`.
+  `wm/eval/visualize.py`: `save_grid` (last context | target | prediction | |diff|×4).
+- `scripts/eval_single_step.py` (`configs/eval/single_step.yaml`): teacher-forced metrics on
+  `n` evenly spaced val windows, `metrics.json` with mean, std and 95% CI, plus a grid.
+- `scripts/play_record.py` (`configs/data/human.yaml`): human recorder, 84/max, seeds from
+  2e9, per-session worker ids. Only tested headless so far.
+- `wm/train/trainer.py` and `scripts/train.py`: AdamW with warmup, grad clip, optional
+  accumulation and `torch.compile`, bf16 on CUDA, EMA, action dropout, TensorBoard, EMA
+  sample grids, run dirs, pruned checkpoints, exact resume (RNG states and data position,
+  also with workers), `--resume RUN_DIR|auto`, save-and-exit on SIGUSR1/SIGTERM, `--dry-run`.
+  `model.arch: unet | tiny`. `configs/train/debug.yaml`.
+- `scripts/slurm/train.sbatch` (`--signal=B:USR1@300`, `exec ... --resume auto "$@"`) and
+  `scripts/slurm/eval.sbatch` (runs `$CMD`).
+- `wm/models/unet.py` (4.7, `unet_config`) and `wm/models/embeddings.py`. `small` 14.3M and
+  `base` 34.4M parameters at 84 (`configs/model/{small,base}.yaml`, `ch` keyed by resolution).
+- Integration on `main`: the trainer builds the real `small` U-Net from `debug.yaml`
+  (14,263,683 parameters, same as `small.yaml`) and a CPU dry run on `data/debug/` passes.
+
+**Carried over to CP4:**
+
+- **CP3 integration checks are still open** (they need Discovery and a checkpoint loader):
+  the 50k-step `debug.yaml` run, `eval_single_step.py` on its checkpoint against copy-last,
+  and the sample-grid check. Commands are in `progress/cp3-B.md` (Follow-ups). Do the
+  `model.arch=tiny` smoke job (`--set name=debug_tiny`) first.
+- `eval_single_step.py` loads checkpoints through `WorldModel.from_checkpoint` (4.10), which
+  is still a stub. CP4-C owns `wm/inference.py`; build it first so the CP3 check can run.
+  Checkpoint layout: `model` and `ema` are the **network** state dicts (UNet keys, no
+  `net.` or `_orig_mod.` prefix); `config` is the full train config as a dict. Build the
+  net with `UNetConfig(C, K=data.K, H, ch=model.ch, n_res, emb_dim, n_levels, attn_lowest,
+  dropout)`, where C = 1 if `data.grayscale` else 3 and H = 84.
+- CP4-B: context noise goes in `Trainer._inputs` (now `torch.zeros_like(actions)`). Draw it
+  from the global torch RNG so exact resume still holds, and log the level distribution.
+- LPIPS needs AlexNet weights (233 MB) on first use. Discovery compute nodes may have no
+  internet: run `python -c "import lpips; lpips.LPIPS(net='alex')"` once on a login node.
+- Copy-last PSNR is pulled up by identical frames (6.8% of debug val windows at the 100 dB
+  cap; median 31.06 dB). Compare models on the same windows, and report LPIPS too.
+- A persistent DataLoader worker with an open HDF5 file does not exit on its own; torch
+  waits 5 s per worker, then terminates it (~40 s at process exit with the default 8
+  workers). Harmless (it happens after the checkpoint is saved). A fix needs a close hook in
+  `wm/data/dataset.py`.
+- A plain `scancel` (SIGTERM to every process) can kill loader workers before the trainer
+  saves, losing up to `save_every` steps. Stop jobs with `scancel --signal=USR1 --batch <id>`.
+- CP4-C: `channels_last` and `torch.compile` are untested on the U-Net. Batch-1 `small`
+  forward at 84 on an M3: 60 ms CPU, 14 ms MPS.
 - CP4-C (D11): on Gaussian data, Euler at N=3 gives ≈ 0.53 of the true std (expect blur
   on real frames); Heun at N=3 overshoots 3.75× before the clamp. Check both in the benchmark.
 - CP5-B: collection laptop (Aunonto) has little disk left; collect `data/full/` elsewhere.
   `to_model_frame(method="max")` costs ~1.6 ms per frame (~20% of collection time); a numpy
   version would speed up CP5 collection (CP1-A-owned file, change needs the integrator).
-- CP5-C: the CFG hook is `_guided_denoise` in `wm/diffusion/sampler.py`.
+- CP5-C: the CFG hook is `_guided_denoise` in `wm/diffusion/sampler.py`. `action_input`
+  goes on `UNetConfig`; `"adagn+planes"` widens `conv_in`.
+- Human recording on several machines: give each person their own `first_worker` in
+  `configs/data/human.yaml` (e.g. Aunonto 0, Syed 100, Michael 200).
 - On macOS, opencv bundles its own `libSDL2` next to pygame's (objc duplicate-class
   warning). No crash seen yet; if one appears, import cv2 lazily in `wm/env.py`.
 - Keep the repo outside iCloud-synced folders. iCloud sets `UF_HIDDEN` on `.venv` files and
@@ -177,6 +210,8 @@ to see what already exists.
 | D16 | Pretrained agent: `sb3/ppo-SpaceInvadersNoFrameskip-v4` (PPO, CPU, `deterministic=False`). Scores over 5 seeds: agent 1041 ± 264, ε=0.2 596 ± 137, ε=0.3 291 ± 180, random 139 ± 62. | Final (CP1-C) |
 | D17 | Wave-transition coverage target: ≥ 20 for the 500k debug set (24 measured; random play never clears a wave), ≥ 50 kept for `data/full/`. Add an ε ≈ 0.05 agent job in CP5 if more late-wave frames are needed. | Final (CP2-A) |
 | D18 | Collector writer ids are `w = job_index * workers + worker`, so episode seed = `base_seed + episode_uid`. Resuming with a different `--workers` is refused. | Final (CP2-A) |
+| D19 | Checkpoints store the network state dicts (`model`, `ema`) and the full train config; training data order is `randperm(n, seed + epoch)` per epoch, and the resume position is derived from `step × grad_accum`, so resume is exact with any number of workers. | Final (CP3-B) |
+| D20 | Model YAMLs hold `UNetConfig` fields except `C, K, H` (from the data); `ch` maps resolution to channel list. At 96 the 4.7 lists give 22.9M (`small`) and 52.8M (`base`), above the targets; targets apply at 84 (D10). | Final (CP3-C) |
 
 ### 1.4 Open questions
 
@@ -184,6 +219,7 @@ to see what already exists.
 - Does Discovery have a Python 3.13 module? `setup.sh` requires `python3.13`. If not, the
   cluster setup needs its own path (pygame is only needed on laptops).
 - How much human play to record (target: at least 1 hour total, collected during CP3 to CP5).
+  `play_record.py` exists (CP3-A) but nobody has recorded yet.
 - Intel Macs: PyTorch has no Intel-Mac wheels that support Python 3.13 (CP1-A used 3.12 +
   torch 2.2.2 + `numpy<2`). Support that setup, or use those machines only with the cluster?
 
@@ -203,6 +239,11 @@ The integrator adds rows at each checkpoint.
 | 2026-11-04 | CP2 | `smoke_cp2.py` on `data/debug/` (471,846 train windows, K=4, batch 32, 4 workers, `TinyDenoiserNet(hidden=32)`, AdamW 2e-3): 200 CPU steps in 59 s, no NaN, mean loss first 20 steps 1.037, last 20 steps 0.394. |
 | 2026-11-04 | CP2 | `bench_loader.py` on `data/debug/` (K=4, batch 64), samples/s for 0/2/4/8 workers: lazy 1,091 / 2,137 / 3,955 / 5,529; in memory 7,026 / 9,100 / 14,037 / 10,605 (12.7 s startup). Target ≥ 2,000 met with ≥ 2 lazy workers. |
 | 2026-11-04 | CP2 | EDM Gaussian oracle (s = 0.3): Heun N=50 std/s 1.003; Euler N=3 0.535 (closed form 0.532). Default N=3 schedule σ = [5.0, 0.283, 0.002, 0]. |
+| 2026-11-04 | CP3 | Fast suite 233 passed after merging A, B, C (165 → 186 → 197 → 233; macOS arm64, CPU, Python 3.13.2). Slow trainer resume test (`num_workers=2`) passes. |
+| 2026-11-04 | CP3 | Copy-last baseline, `data/debug/` val, 2,048 evenly spaced windows (CP3-A): PSNR 35.45 ± 0.78 dB (median 31.06; 6.8% of windows identical, at the 100 dB cap), SSIM 0.9673 ± 0.0015, LPIPS 0.0105 ± 0.0006 (mean ± 95% CI). Grid: `docs/figures/cp3_copy_last_grid.png`. |
+| 2026-11-04 | CP3 | U-Net parameters (C=3, K=4): `small` 14.26M at 84, 22.92M at 96; `base` 34.35M at 84, 52.85M at 96. Batch-64 forward of `small` at 84 on an M3: 5.8 s CPU, 0.95 s MPS. GPU timing test not yet run on Discovery. |
+| 2026-11-04 | CP3 | Integration on `main`: `train.py --config configs/train/debug.yaml --dry-run` builds the real `small` U-Net (14,263,683 parameters) and runs 5 steps, a val pass and EMA sampling on `data/debug/` (CPU). Tiny-net run, 300 CPU steps on `data/debug/`: loss 1.15 → 0.19, val loss 0.16 (CP3-B). |
+| 2026-11-04 | CP3 | **Pending:** the 50k-step Discovery run, model vs copy-last on `eval_single_step.py` (needs `WorldModel.from_checkpoint`), and the sample-grid check. |
 
 ---
 
@@ -591,6 +632,7 @@ class WorldModel(WorldModelProtocol):
   - PSNR: `data_range=1`, capped at 100 dB for identical images.
   - SSIM: `torchmetrics`, `data_range=1`.
   - LPIPS: `lpips.LPIPS(net="alex")`, with inputs mapped to [-1,1], at native resolution.
+  - Each metric returns per-image values `(N,)`, so callers can compute CIs (`wm/eval/metrics.py`).
 - **Single-step (teacher-forced)**: on val windows, predict the target from real context.
 - **Rollout**: for an eval trajectory with frames `f_0..f_N` and actions `a_0..a_{N-1}`,
   the initial context is `f_0..f_{K-1}`. Generated frame `g_j` (for `j ≥ K`) uses the last
@@ -611,6 +653,8 @@ class WorldModel(WorldModelProtocol):
   `git_commit.txt`, `tb/` (TensorBoard), `checkpoints/`, and `samples/`.
 - A checkpoint is a dict: `{"model", "ema", "optimizer", "scheduler", "step", "config", "rng_states"}`.
   Files: `ckpt_last.pt` plus `ckpt_<step:07d>.pt` every `save_every` steps.
+  `model` and `ema` are the network's state dicts (UNet keys); `config` is the full train config as a dict;
+  `rng_states` holds python, numpy, torch and CUDA states (D19).
 - Seed `random`, `numpy`, and `torch` from the config. DataLoader workers get
   `seed + worker_id` via `worker_init_fn`.
 
@@ -944,7 +988,7 @@ Tasks:
 Tests:
 - Output shapes for H ∈ {84, 96}, K ∈ {1, 4, 8}, C ∈ {1, 3}.
 - At initialization the output is exactly zero.
-- After re-initializing the output conv with non-zero weights, changing `actions`, `c_noise`, `ctx_level`, or `context` each changes the output.
+- After giving every zero-initialized parameter small random values (the output conv alone is not enough: the zero-initialized AdaGN Linears are the only path from `emb`), changing `actions`, `c_noise`, `ctx_level`, or `context` each changes the output.
 - After one backward pass every parameter has a gradient (no unused parameters).
 - An indivisible H raises a clear error.
 - Forward time at batch 64 (marker `gpu`).
