@@ -1,0 +1,11 @@
+# Human play recorded with scripts/play_record.py (ROADMAP CP3-A).
+# python scripts/play_record.py --config configs/data/human.yaml [--hz 15]
+out_dir: data/human
+resolution: 84          # D10
+resize_method: max      # D10
+max_episode_steps: 27000
+max_rows: 100000
+# Each session writes as a new worker id: the smallest unused one >= first_worker. When recording on
+# several machines into datasets that will be merged, give each person their own range
+# (e.g. Aunonto 0, Syed 100, Michael 200) so shard names, episode uids and seeds never clash.
+first_worker: 0
