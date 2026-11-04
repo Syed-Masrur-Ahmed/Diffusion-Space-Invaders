@@ -1,0 +1,65 @@
+# CP3 debug run (ROADMAP CP3-B): small U-Net, K=4, data/debug/, 50k steps.
+#   python scripts/train.py --config configs/train/debug.yaml
+#   python scripts/train.py --config configs/train/debug.yaml --dry-run --set model.arch=tiny
+# On Discovery, point at scratch with --set data.root=/path/to/scratch/data
+name: debug
+seed: 0
+
+data:
+  root: data            # dataset dirs are root/<dir>
+  dirs: [debug]
+  K: 4
+  batch_size: 64
+  num_workers: 6        # lazy HDF5 loader; 4-8 workers give ~4k-6k samples/s
+  grayscale: false
+  val_fraction: 0.05
+  in_memory: false      # data/debug needs ~10.6 GB per split in memory
+
+model:
+  arch: unet            # unet | tiny (tests/fixtures.py::TinyDenoiserNet, for tests and smoke jobs)
+  # "small" U-Net fields (4.7), kept here rather than in CP3-C's configs/model/small.yaml.
+  ch: [64, 128, 256]    # 84 -> 42 -> 21
+  n_res: 2
+  emb_dim: 256
+  n_levels: 10
+  attn_lowest: false
+  dropout: 0.0
+  tiny_hidden: 16       # only for arch: tiny
+
+edm:                    # copied from configs/train/edm_default.yaml
+  sigma_data: 0.5
+  p_mean: -0.4
+  p_std: 1.2
+  sigma_min: 2.0e-3     # training sigma clamp
+  sigma_max: 20.0
+
+sampler:                # copied from configs/train/edm_default.yaml
+  num_steps: 3
+  sigma_min: 2.0e-3
+  sigma_max: 5.0
+  rho: 7.0
+  method: euler         # euler | heun
+
+train:
+  steps: 50000
+  lr: 1.0e-4
+  betas: [0.9, 0.999]
+  weight_decay: 1.0e-2
+  warmup_steps: 1000
+  lr_schedule: constant # constant | cosine (decays to 0 at `steps` after warmup)
+  grad_clip: 1.0
+  grad_accum: 1         # batches per optimizer step
+  ema_decay: 0.999      # EMA copies the weights exactly during warmup
+  p_action_drop: 0.1
+  aug_max: 0.0          # context noise augmentation (4.8); implemented in CP4-B
+  ctx_noise_mode: shared  # shared | per_frame (CP4-B)
+  compile: false
+  allow_mps: false      # use Apple MPS when no CUDA (local debugging only)
+  runs_dir: runs
+  log_every: 50
+  val_every: 1000
+  val_windows: 2048     # fixed, evenly spaced val windows for the val loss
+  sample_every: 2500
+  n_samples: 8          # val windows in each sample grid
+  save_every: 5000
+  keep_last: 3
