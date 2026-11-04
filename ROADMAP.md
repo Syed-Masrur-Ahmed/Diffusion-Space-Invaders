@@ -47,9 +47,9 @@ to see what already exists.
 | CP1 | A: Environment module and resolution decision | `cp1/A-env` | Aunonto | DONE |
 | CP1 | B: HDF5 storage (writer, reader, validator) | `cp1/B-storage` | Syed | DONE |
 | CP1 | C: Policies (pretrained agent, random, epsilon mix) | `cp1/C-policies` | Michael | DONE |
-| CP2 | A: Collector, debug and eval datasets, coverage report | `cp2/A-collect` | Aunonto | TODO |
-| CP2 | B: PyTorch window dataset and loader | `cp2/B-dataset` | Syed | TODO |
-| CP2 | C: EDM core and sampler | `cp2/C-edm` | Michael | TODO |
+| CP2 | A: Collector, debug and eval datasets, coverage report | `cp2/A-collect` | Aunonto | DONE |
+| CP2 | B: PyTorch window dataset and loader | `cp2/B-dataset` | Syed | DONE |
+| CP2 | C: EDM core and sampler | `cp2/C-edm` | Michael | DONE |
 | CP3 | A: Metrics, baselines, visualization, human recorder | `cp3/A-eval` | Aunonto | TODO |
 | CP3 | B: Trainer | `cp3/B-trainer` | Syed | TODO |
 | CP3 | C: U-Net denoiser | `cp3/C-unet` | Michael | TODO |
@@ -109,15 +109,47 @@ to see what already exists.
 - `scripts/smoke_cp1.py` (integration): ε=0.2 agent, 2 episodes capped at 500 steps, 84/max
   shard plus a 4× frame grid. `validate_data.py` passes.
 
-**Carried over to CP2:**
+**CP2 (tag `cp2`, details in `progress/cp2-A.md`, `cp2-B.md`, `cp2-C.md`):**
 
-- CP2-A: the collector config (`configs/data/*.yaml`) sets `resolution: 84` and
-  `resize_method: max` (D10). Call `policy.reset(seed, obs)` and then `act(obs)` on that
-  same obs; do not push the reset frame twice.
-- CP2-B: `ShardReader.read` with scattered index arrays uses slow h5py fancy indexing over
-  lzf chunks. Read a contiguous `i-K..i` slice per window, or load in memory.
-- CP2-B: `make_fake_shard(path, ...)` takes an output **directory** and returns the shard
-  path; lengths are in rows. Fake-data formulas for alignment tests are in `progress/cp1-B.md`.
+- `scripts/collect.py`: spawn multiprocess collector driven by `configs/data/{debug,eval}.yaml`
+  (84/max). One `ShardWriter` per (job, worker) part (D18), per-episode ε, `_DONE` markers
+  and resume, `summary.json`. Replay determinism is tested (D9).
+- `wm/data/ram.py`: verified RAM map (invaders left 17, lives 73, score BCD 102/104, player
+  x 28, alien block x 26 / y 16, UFO 76 ≥ 4). AtariARI `player_score` and `enemies_y` failed
+  and were replaced; `missiles_y` was dropped. Figure: `docs/figures/cp2_ram_verify.png`.
+- `wm/data/coverage.py` and `scripts/coverage_report.py`: report and montages in
+  `docs/figures/cp2_coverage_*`. 4 of 5 targets met; wave transitions revised (D17).
+- `wm/data/dataset.py`: `WindowDataset` (4.5) reading one contiguous slice per window,
+  optional `in_memory`, `DataConfig`, `make_dataloader`. `scripts/bench_loader.py`.
+- `wm/diffusion/edm.py` (`EDMDenoiser`, `loss_terms`, `loss_by_sigma`) and
+  `wm/diffusion/sampler.py` (`karras_sigmas`, Euler/Heun `sample`, batched action CFG that
+  takes the single-pass path at `cfg_scale=1`). `configs/train/edm_default.yaml`.
+- `scripts/smoke_cp2.py` (integration): `make_dataloader` over `data/debug/` into
+  `EDMDenoiser(TinyDenoiserNet)`, 200 CPU steps, checks finite and decreasing loss.
+
+**Carried over to CP3:**
+
+- CP3-B: call `per, sigma = edm.loss_terms(...)`, `loss = per.mean()`, and log
+  `loss_by_sigma(per, sigma)`. Pass `WindowDataset` batches as they are (5-D context is
+  flattened inside). Action dropout and context noise are the trainer's job. For sample
+  grids, call `sample(ema_denoiser.eval(), ...)`; `sample` only applies `no_grad`. Copy the
+  `edm:` and `sampler:` blocks from `configs/train/edm_default.yaml` into `debug.yaml`.
+- CP3-B: exact resume needs the global torch RNG restored (σ and ε are drawn from it).
+  Use the lazy loader with 4–8 workers (3.8k–6k samples/s on an M-series laptop);
+  `in_memory` on `data/debug/` needs ~10.6 GB per split. Build each loader once per run
+  (`persistent_workers`). Nest `DataConfig` in the train config or duck-type its fields.
+- CP3-B: `data/debug/` and `data/eval/` are not in git. Regenerate with
+  `python scripts/collect.py --config configs/data/{debug,eval}.yaml --workers {4,2}`
+  (keep `--workers` the same as the original run so writer ids and seeds match), then copy
+  to Discovery scratch. Agent actions can differ across torch builds, so datasets from
+  different machines are equally valid but not byte-identical.
+- CP3-A: `data/eval/` episodes all have ≥ 262 rows, enough for K + 200 horizon.
+- CP4-C (D11): on Gaussian data, Euler at N=3 gives ≈ 0.53 of the true std (expect blur
+  on real frames); Heun at N=3 overshoots 3.75× before the clamp. Check both in the benchmark.
+- CP5-B: collection laptop (Aunonto) has little disk left; collect `data/full/` elsewhere.
+  `to_model_frame(method="max")` costs ~1.6 ms per frame (~20% of collection time); a numpy
+  version would speed up CP5 collection (CP1-A-owned file, change needs the integrator).
+- CP5-C: the CFG hook is `_guided_denoise` in `wm/diffusion/sampler.py`.
 - On macOS, opencv bundles its own `libSDL2` next to pygame's (objc duplicate-class
   warning). No crash seen yet; if one appears, import cv2 lazily in `wm/env.py`.
 - Keep the repo outside iCloud-synced folders. iCloud sets `UF_HIDDEN` on `.venv` files and
@@ -134,8 +166,8 @@ to see what already exists.
 | D5 | Default game mode and difficulty only; the one-shot rule stays. Demo difficulty is eased with starting scenarios and slower speed. | Final |
 | D6 | Final model RGB (following DIAMOND). Greyscale for debugging is derived on the fly from stored RGB. | Final |
 | D7 | Pixel-space diffusion (no VAE), unlike GameNGen. 84×84 frames are small enough. | Proposed in roadmap |
-| D8 | Store RAM (128 bytes) per step for coverage stats and detector calibration. Never used as model input. | Proposed in roadmap |
-| D9 | Ground truth for rollouts comes from deterministic replay (seed, no-op count, actions). | Proposed in roadmap |
+| D8 | Store RAM (128 bytes) per step for coverage stats and detector calibration. Never used as model input. Verified map in `wm/data/ram.py` (CP2-A). | Final (CP2-A) |
+| D9 | Ground truth for rollouts comes from deterministic replay (seed, no-op count, actions). Replay reproduces every stored frame, reward, life count and RAM byte exactly (CP2-A test). | Final (CP2-A) |
 | D10 | 84×84, `method="max"`. `area` keeps the laser in only 65.5% of frames at 84 and 96; `max` keeps 100% at both. 96/max keeps more alien shape (84/max turns aliens into blocks) and stays an option if sprite detail matters. | Final (CP1-A) |
 | D11 | Default sampling steps and classifier-free guidance weight | Open, decided in CP4-C and CP5-C |
 | D12 | Training runs on Dartmouth's Discovery cluster (Slurm), with checkpoint and auto-resume so jobs survive time limits and queue waits | Final |
@@ -143,6 +175,8 @@ to see what already exists.
 | D14 | Python 3.13 for the venv (pygame has no 3.14 wheels on macOS), enforced by `setup.sh` | Final |
 | D15 | `wm` is installed as an editable package (`pyproject.toml`, `-e .` in `requirements.txt`); dependencies stay in `requirements.txt` | Final |
 | D16 | Pretrained agent: `sb3/ppo-SpaceInvadersNoFrameskip-v4` (PPO, CPU, `deterministic=False`). Scores over 5 seeds: agent 1041 ± 264, ε=0.2 596 ± 137, ε=0.3 291 ± 180, random 139 ± 62. | Final (CP1-C) |
+| D17 | Wave-transition coverage target: ≥ 20 for the 500k debug set (24 measured; random play never clears a wave), ≥ 50 kept for `data/full/`. Add an ε ≈ 0.05 agent job in CP5 if more late-wave frames are needed. | Final (CP2-A) |
+| D18 | Collector writer ids are `w = job_index * workers + worker`, so episode seed = `base_seed + episode_uid`. Resuming with a different `--workers` is refused. | Final (CP2-A) |
 
 ### 1.4 Open questions
 
@@ -163,6 +197,12 @@ The integrator adds rows at each checkpoint.
 | 2026-10-16 | CP1 | Fast suite 85 passed; `slow or network or env` 13 passed (macOS arm64, CPU, Python 3.13.2, ale-py 0.12.1). Laser visibility: 84/max and 96/max 100%, 84/area and 96/area 65.5%, raw single frame 50% (re-run on ale-py 0.12.1 matches CP1-A's 0.10.2 numbers). D10 = 84/max. |
 | 2026-10-16 | CP1 | Agent scores (5 seeds): agent 1041 ± 264, ε=0.2 596 ± 137, ε=0.3 291 ± 180, random 139 ± 62. Writer 54,886 rows/s at 84×84 (fake frames). |
 | 2026-10-16 | CP1 | `smoke_cp1.py`: 2 episodes × 501 rows at 84/max, 1,031 rows/s end to end (env + agent bound), 1.73 MiB, compression ratio 11.7. `validate_data.py` OK. 20-frame visual check: laser visible, frames square, not aspect-corrected. |
+| 2026-11-04 | CP2 | Fast suite 165 passed after merging A, B, C (105 → 131 → 165; macOS arm64, CPU, Python 3.13.2). |
+| 2026-11-04 | CP2 | `data/debug/` (integrator's regeneration, `--workers 4`, 2 min 42 s on 10 cores): 500,000 steps, 688 episodes (457 agent, 231 random), 500,688 rows, 740 MiB, compression 13.7, validator OK. Aunonto's original: 687 episodes, 741 MiB. `data/eval/`: 100 episodes (70 agent, 30 random), 39,860 rows, 68 MiB, seeds ≥ 1e9, validator OK. |
+| 2026-11-04 | CP2 | Coverage on Aunonto's `data/debug/` (`docs/figures/cp2_coverage_report.md`): ≤ 6 invaders 8.48% (target 5%), wave transitions 24 (target 50, revised to 20, D17), game overs 675 (200), UFO visible 17.51% (1%), shields ≤ 50% 15.26% (10%). Life losses 1,958. UFO pixel detector agrees with RAM on 99.93%. Mean score: agent 463.8, random 148.2. |
+| 2026-11-04 | CP2 | `smoke_cp2.py` on `data/debug/` (471,846 train windows, K=4, batch 32, 4 workers, `TinyDenoiserNet(hidden=32)`, AdamW 2e-3): 200 CPU steps in 59 s, no NaN, mean loss first 20 steps 1.037, last 20 steps 0.394. |
+| 2026-11-04 | CP2 | `bench_loader.py` on `data/debug/` (K=4, batch 64), samples/s for 0/2/4/8 workers: lazy 1,091 / 2,137 / 3,955 / 5,529; in memory 7,026 / 9,100 / 14,037 / 10,605 (12.7 s startup). Target ≥ 2,000 met with ≥ 2 lazy workers. |
+| 2026-11-04 | CP2 | EDM Gaussian oracle (s = 0.3): Heun N=50 std/s 1.003; Euler N=3 0.535 (closed form 0.532). Default N=3 schedule σ = [5.0, 0.283, 0.002, 0]. |
 
 ---
 
@@ -423,7 +463,10 @@ and `read(name, rows) -> np.ndarray` for any per-row dataset with a slice or sor
 
 ### 4.5 Training sample contract `[FROZEN]`
 
-`WindowDataset(dataset_dirs, K, split, grayscale=False, val_fraction=0.05, seed=0)`:
+`WindowDataset(dataset_dirs, K, split, grayscale=False, val_fraction=0.05, seed=0, *, in_memory=False)`:
+
+- `in_memory=True` loads each shard's frames and actions into shared-memory tensors; items are identical to the lazy path. `seed` does not affect the split; `make_dataloader(cfg: DataConfig, split)` uses `cfg.seed` for shuffling and worker seeds. `DataConfig` lives in `wm/data/dataset.py`.
+- `shard` in each item indexes the global list of shards from all `dataset_dirs`, sorted by full path.
 
 - Valid **target rows** `i` are rows with `i - K >= start` of the same episode (all of
   `i-K..i` are in one episode). Context rows are `i-K..i-1`, context actions are
@@ -460,6 +503,9 @@ Training:
 - `denoise(x, sigma, context, actions, ctx_level) -> D` (shape (B,C,H,W))
 - `loss(target, context, actions, ctx_level) -> scalar` (samples σ and ε internally)
 - `sigma` is shape (B,) on the same device as `x`.
+- `context` may be (B,K,C,H,W), as `WindowDataset` and `predict_next` give it, or already flattened to (B,K·C,H,W).
+- `loss_terms(target, context, actions, ctx_level) -> (per_sample_loss (B,), sigma (B,))`; `loss` is its mean. `loss_by_sigma(losses, sigma)` buckets them for logging. σ and ε come from the global torch RNG.
+- `EDMDenoiser` applies neither action dropout nor context noise; the trainer does both.
 
 ### 4.7 Denoiser U-Net (`wm/models/unet.py`) `[FROZEN signature]`
 
@@ -777,7 +823,7 @@ Tasks:
    - Montages of 16 random frames per bucket so a person can check the heuristics.
 6. **Initial coverage targets** (revise them if they prove unrealistic, and say why):
    - ≥ 5% of frames with ≤ 6 invaders left
-   - ≥ 50 wave transitions
+   - ≥ 50 wave transitions (revised in CP2 to ≥ 20 for the debug set; ≥ 50 stays for `data/full/`, see D17)
    - ≥ 200 game overs
    - UFO visible in ≥ 1% of frames
    - ≥ 10% of frames with shields ≤ 50% intact
@@ -820,7 +866,7 @@ Tasks:
 Tests (using `TinyDenoiserNet` or analytic oracles, no U-Net):
 - Coefficient identities: `c_skip(σ→0) → 1`, `c_out(σ→0) → 0`.
 - With the oracle `F = F_target`, the loss is 0.
-- **Analytic oracle sampling:** for data `y ~ N(0, s²)` (per pixel, with s ≠ σ_d), the optimal denoiser is `D(x;σ) = x·s²/(σ²+s²)`. Plug it into `sample` with N=50 Heun steps: the samples have std within 3% of s. With N=3 Euler, check that the result is finite and its std is within 15%.
+- **Analytic oracle sampling:** for data `y ~ N(0, s²)` (per pixel, with s ≠ σ_d), the optimal denoiser is `D(x;σ) = x·s²/(σ²+s²)`. Plug it into `sample` with N=50 Heun steps: the samples have std within 3% of s. With N=3 Euler, check that the result is finite and its std is within 3% of the closed-form Euler std (≈ 0.53·s on the default schedule; Euler at N=3 cannot reach s, see `progress/cp2-C.md`).
 - The schedule is monotone decreasing, ends at 0, and the first value equals σ_max.
 - `cfg_scale=1` makes exactly one network call per step (count the calls with a mock).
 - `cfg_scale=0` equals the unconditional result.
