@@ -1,0 +1,14 @@
+# EDM training and sampler defaults (ROADMAP 4.6, 4.9).
+# Load with from_dict(EDMConfig, cfg["edm"]) and from_dict(SamplerConfig, cfg["sampler"]).
+edm:
+  sigma_data: 0.5
+  p_mean: -0.4
+  p_std: 1.2
+  sigma_min: 2.0e-3   # training sigma clamp
+  sigma_max: 20.0
+sampler:
+  num_steps: 3
+  sigma_min: 2.0e-3
+  sigma_max: 5.0
+  rho: 7.0
+  method: euler       # euler | heun
