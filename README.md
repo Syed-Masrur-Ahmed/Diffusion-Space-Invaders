@@ -30,7 +30,7 @@ Then install PyTorch for your machine with the command from
 [pytorch.org](https://pytorch.org/get-started/locally/) (the default build on a laptop, the CUDA
 build on a GPU machine).
 
-**3. Download the checkpoint** (224 MB) from <CHECKPOINT_URL> and save it as
+**3. Download the checkpoint** (224 MB) from [Google Drive](https://drive.google.com/file/d/1bpBC0tTF5uZGqE2Mz3wMtQYqJqwFfAKY/view?usp=sharing) and save it as
 `runs/20261105-0558_debug_small/checkpoints/ckpt_last.pt`:
 
 ```bash
@@ -38,7 +38,7 @@ mkdir -p runs/20261105-0558_debug_small/checkpoints
 # move the downloaded file to runs/20261105-0558_debug_small/checkpoints/ckpt_last.pt
 ```
 
-**4. Get the data** (`data/debug/`, 740 MB, 12 HDF5 shards) from <DATA_URL> and unpack it so
+**4. Get the data** (`data/debug/`, 740 MB, 12 HDF5 shards) from [Google Drive](https://drive.google.com/file/d/1SRgxvCyY3Drwo1DSyvv34Q1z6UBD5LgD/view?usp=drive_link) and unpack it so
 the shards are at `data/debug/shard_w*.h5`. Or regenerate it (about 10 minutes; downloads the
 agent policy from the Hugging Face Hub):
 
