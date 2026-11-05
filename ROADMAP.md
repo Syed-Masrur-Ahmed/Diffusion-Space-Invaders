@@ -147,19 +147,22 @@ to see what already exists.
   `base` 34.4M parameters at 84 (`configs/model/{small,base}.yaml`, `ch` keyed by resolution).
 - Integration on `main`: the trainer builds the real `small` U-Net from `debug.yaml`
   (14,263,683 parameters, same as `small.yaml`) and a CPU dry run on `data/debug/` passes.
+- `WorldModel.from_checkpoint` and `predict_next` (4.10), done early as a CP3 carry-over
+  (`cp3/loader`, merged 2026-11-05) so the CP3 eval can run. It reads the 4.12 checkpoint,
+  builds `unet` or `tiny` at 84, loads `ema` (or `model`) with `strict=True`, and samples
+  with the checkpoint's `edm` and `sampler` configs. `cfg_scale=None` means 1.0.
+  `tests/test_inference.py` covers the CP4-C test list plus a trainer-written checkpoint.
 
 **Carried over to CP4:**
 
-- **CP3 integration checks are still open** (they need Discovery and a checkpoint loader):
+- **CP3 integration checks are still open** (they need Discovery):
   the 50k-step `debug.yaml` run, `eval_single_step.py` on its checkpoint against copy-last,
   and the sample-grid check. Commands are in `progress/cp3-B.md` (Follow-ups). Do the
   `model.arch=tiny` smoke job (`--set name=debug_tiny`) first.
-- `eval_single_step.py` loads checkpoints through `WorldModel.from_checkpoint` (4.10), which
-  is still a stub. CP4-C owns `wm/inference.py`; build it first so the CP3 check can run.
+- CP4-C: `WorldModel` already loads checkpoints and samples (see CP3 above). CP4-C still owns
+  `wm/inference.py` and adds `channels_last`, optional bf16/fp16 autocast, and the benchmark.
   Checkpoint layout: `model` and `ema` are the **network** state dicts (UNet keys, no
-  `net.` or `_orig_mod.` prefix); `config` is the full train config as a dict. Build the
-  net with `UNetConfig(C, K=data.K, H, ch=model.ch, n_res, emb_dim, n_levels, attn_lowest,
-  dropout)`, where C = 1 if `data.grayscale` else 3 and H = 84.
+  `net.` or `_orig_mod.` prefix); `config` is the full train config as a dict.
 - CP4-B: context noise goes in `Trainer._inputs` (now `torch.zeros_like(actions)`). Draw it
   from the global torch RNG so exact resume still holds, and log the level distribution.
 - LPIPS needs AlexNet weights (233 MB) on first use. Discovery compute nodes may have no
@@ -243,7 +246,8 @@ The integrator adds rows at each checkpoint.
 | 2026-11-04 | CP3 | Copy-last baseline, `data/debug/` val, 2,048 evenly spaced windows (CP3-A): PSNR 35.45 ± 0.78 dB (median 31.06; 6.8% of windows identical, at the 100 dB cap), SSIM 0.9673 ± 0.0015, LPIPS 0.0105 ± 0.0006 (mean ± 95% CI). Grid: `docs/figures/cp3_copy_last_grid.png`. |
 | 2026-11-04 | CP3 | U-Net parameters (C=3, K=4): `small` 14.26M at 84, 22.92M at 96; `base` 34.35M at 84, 52.85M at 96. Batch-64 forward of `small` at 84 on an M3: 5.8 s CPU, 0.95 s MPS. GPU timing test not yet run on Discovery. |
 | 2026-11-04 | CP3 | Integration on `main`: `train.py --config configs/train/debug.yaml --dry-run` builds the real `small` U-Net (14,263,683 parameters) and runs 5 steps, a val pass and EMA sampling on `data/debug/` (CPU). Tiny-net run, 300 CPU steps on `data/debug/`: loss 1.15 → 0.19, val loss 0.16 (CP3-B). |
-| 2026-11-04 | CP3 | **Pending:** the 50k-step Discovery run, model vs copy-last on `eval_single_step.py` (needs `WorldModel.from_checkpoint`), and the sample-grid check. |
+| 2026-11-04 | CP3 | **Pending:** the 50k-step Discovery run, model vs copy-last on `eval_single_step.py`, and the sample-grid check. |
+| 2026-11-05 | CP3 | `cp3/loader` merged: fast suite 242 passed. Pipeline check: a 200-step tiny-net run on `data/debug/` loads through `WorldModel.from_checkpoint` into `eval_single_step.py` (256 val windows; metrics.json and grid.png written). |
 
 ---
 
