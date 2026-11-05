@@ -53,6 +53,7 @@ to see what already exists.
 | CP3 | A: Metrics, baselines, visualization, human recorder | `cp3/A-eval` | Aunonto | DONE |
 | CP3 | B: Trainer | `cp3/B-trainer` | Syed | DONE |
 | CP3 | C: U-Net denoiser | `cp3/C-unet` | Michael | DONE |
+| CP3 | Integration: WorldModel loader (carry-over) | `cp3/loader` | Syed | DONE |
 | CP4 | A: Autoregressive rollouts and horizon evaluation | `cp4/A-rollout` | Aunonto | TODO |
 | CP4 | B: Context noise augmentation runs | `cp4/B-noiseaug` | Syed | TODO |
 | CP4 | C: Inference engine and sampler benchmarks | `cp4/C-inference` | Michael | TODO |
@@ -152,11 +153,16 @@ to see what already exists.
   builds `unet` or `tiny` at 84, loads `ema` (or `model`) with `strict=True`, and samples
   with the checkpoint's `edm` and `sampler` configs. `cfg_scale=None` means 1.0.
   `tests/test_inference.py` covers the CP4-C test list plus a trainer-written checkpoint.
+- Milestone 1 submission (`milestone1/prep`, tag `milestone1`): `notebooks/milestone1.ipynb`
+  (data, models, copy-last vs `small` U-Net on 64 val windows, grids, training curve) and
+  `results/milestone1/` (TensorBoard events, run config, last sample grids, both evals). The
+  sampler now draws its initial noise on the generator's device and the eval uses a CPU
+  generator (D21), so the eval reproduces on CPU, MPS and CUDA.
 
 **Carried over to CP4:**
 
 - CP3 integration checks ran on a ~20k-step `small` checkpoint, not the planned 50k
-  (`runs/20261105-0558_debug_small`). The model's SSIM (0.743) is well below copy-last's (0.964)
+  (`runs/20261105-0558_debug_small`). The model's SSIM (0.740) is well below copy-last's (0.964)
   because of faint speckle on the black background; one sample also gets a score digit wrong.
   Check whether more steps or more sampler steps (CP4-C benchmark) fix this. Rerun the eval on
   the same 2,048 windows as the copy-last row, not only 64.
@@ -216,12 +222,12 @@ to see what already exists.
 | D18 | Collector writer ids are `w = job_index * workers + worker`, so episode seed = `base_seed + episode_uid`. Resuming with a different `--workers` is refused. | Final (CP2-A) |
 | D19 | Checkpoints store the network state dicts (`model`, `ema`) and the full train config; training data order is `randperm(n, seed + epoch)` per epoch, and the resume position is derived from `step × grad_accum`, so resume is exact with any number of workers. | Final (CP3-B) |
 | D20 | Model YAMLs hold `UNetConfig` fields except `C, K, H` (from the data); `ch` maps resolution to channel list. At 96 the 4.7 lists give 22.9M (`small`) and 52.8M (`base`), above the targets; targets apply at 84 (D10). | Final (CP3-C) |
+| D21 | The sampler draws its initial noise on the generator's device, then moves it to the model's device; `eval_single_step.py` seeds a CPU generator. The same seed then gives the same samples on CPU, MPS and CUDA (CPU vs MPS agree to 1e-6 relative on all metrics). Earlier evals seeded a generator on the model's device, so CUDA and CPU results differed (PSNR 34.36 vs 33.84). | Final (Milestone 1) |
 
 ### 1.4 Open questions
 
-- Discovery GPU partition, GPU type, memory, and the job time limit. Fill in here: ____
-- Does Discovery have a Python 3.13 module? `setup.sh` requires `python3.13`. If not, the
-  cluster setup needs its own path (pygame is only needed on laptops).
+- Discovery: partition `gpuq`; Python 3.13 via uv (there is no 3.13 module). Still to record:
+  GPU type, memory, and the job time limit.
 - How much human play to record (target: at least 1 hour total, collected during CP3 to CP5).
   `play_record.py` exists (CP3-A) but nobody has recorded yet.
 - Intel Macs: PyTorch has no Intel-Mac wheels that support Python 3.13 (CP1-A used 3.12 +
@@ -248,7 +254,9 @@ The integrator adds rows at each checkpoint.
 | 2026-11-04 | CP3 | U-Net parameters (C=3, K=4): `small` 14.26M at 84, 22.92M at 96; `base` 34.35M at 84, 52.85M at 96. Batch-64 forward of `small` at 84 on an M3: 5.8 s CPU, 0.95 s MPS. GPU timing test not yet run on Discovery. |
 | 2026-11-04 | CP3 | Integration on `main`: `train.py --config configs/train/debug.yaml --dry-run` builds the real `small` U-Net (14,263,683 parameters) and runs 5 steps, a val pass and EMA sampling on `data/debug/` (CPU). Tiny-net run, 300 CPU steps on `data/debug/`: loss 1.15 → 0.19, val loss 0.16 (CP3-B). |
 | 2026-11-05 | CP3 | `cp3/loader` merged: fast suite 242 passed. Pipeline check: a 200-step tiny-net run on `data/debug/` loads through `WorldModel.from_checkpoint` into `eval_single_step.py` (256 val windows; metrics.json and grid.png written). |
-| 2026-11-05 | CP3 | **Integration check** (Discovery, CUDA): `small` U-Net trained ~20k steps on `debug.yaml` (`runs/20261105-0558_debug_small`), `eval_single_step.py` on 64 evenly spaced `data/debug/` val windows, EMA, default sampler (Euler, N=3). Model: PSNR 34.36 ± 1.06 dB, SSIM 0.743 ± 0.014, LPIPS 0.0071 ± 0.0024. Copy-last on the same 64 windows: PSNR 34.29 ± 1.08 (6.25% at the 100 dB cap), SSIM 0.964 ± 0.002, LPIPS 0.0122 ± 0.0007 (mean ± 95% CI). The model beats copy-last on LPIPS and ties on PSNR; SSIM is lower because of background speckle. Grid: `docs/figures/cp3_model_grid.png` (predictions track bullets and formation moves). |
+| 2026-11-05 | CP3 | **Integration check** (Discovery, CUDA): `small` U-Net trained ~20k steps on `debug.yaml` (`runs/20261105-0558_debug_small`), `eval_single_step.py` on 64 evenly spaced `data/debug/` val windows, EMA, default sampler (Euler, N=3). Model: PSNR 34.36 ± 1.06 dB, SSIM 0.743 ± 0.014, LPIPS 0.0071 ± 0.0024. Copy-last on the same 64 windows: PSNR 34.29 ± 4.33 (6.25% at the 100 dB cap), SSIM 0.964 ± 0.008, LPIPS 0.0122 ± 0.0030 (mean ± 95% CI; CIs corrected 2026-11-05). Model numbers used CUDA-generator noise and are superseded by the Milestone 1 row (D21). The model beats copy-last on LPIPS and ties on PSNR; SSIM is lower because of background speckle. Grid: `docs/figures/cp3_model_grid.png` (predictions track bullets and formation moves). |
+| 2026-11-05 | M1 | Training run `runs/20261105-0558_debug_small` (Discovery `gpuq`, `debug.yaml`, `small` U-Net, batch 64, `train.steps=20000`): 20,000 steps at ~292 samples/s (median of the logged throughput); final train loss 0.0017 (0.0019 smoothed), final val loss 0.0019. TensorBoard events in `results/milestone1/run/tb/`. |
+| 2026-11-05 | M1 | **Milestone 1 eval** (`eval_single_step.py --n 64`, 64 evenly spaced `data/debug/` val windows of 26,090, EMA, Euler N=3, seed 0, CPU-generator noise, D21), mean ± 95% CI. copy-last (0 params): PSNR 34.29 ± 4.33 dB (6.25% at the 100 dB cap), SSIM 0.9636 ± 0.0080, LPIPS 0.0122 ± 0.0030. `small` U-Net (14,263,683 params): PSNR 33.84 ± 1.13 dB, SSIM 0.7401 ± 0.0145, LPIPS 0.0081 ± 0.0026. `notebooks/milestone1.ipynb` reproduces these on MPS and CPU (rel. diff ≤ 1e-6). Results in `results/milestone1/eval/`. |
 
 ---
 
@@ -610,6 +618,7 @@ parameter count at construction.
 - **Heun** (option): Euler step, then a 2nd-order correction on every step except the one that ends at σ = 0.
 - Clamp the final output to [-1, 1].
 - `sample(denoiser, context, actions, ctx_level, cfg: SamplerConfig, cfg_scale=1.0, generator=None) -> (B,C,H,W)`.
+- The initial noise is drawn on `generator.device` and moved to the model's device, so a CPU generator gives the same samples on any device (D21).
 
 ### 4.10 Inference API (`wm/inference.py`) `[FROZEN]`
 
@@ -1046,6 +1055,10 @@ Tests:
 
 #### CP4-C: Inference engine and sampler benchmarks
 **Branch:** `cp4/C-inference` · **Owns:** `wm/inference.py`, `scripts/bench_sampling.py`, `tests/test_inference.py`
+
+The basic loader already exists (CP3 carry-over, `cp3/loader`): `from_checkpoint` (EMA or raw
+weights, `strict=True`, optional `compile`) and `predict_next` with per-call overrides, plus
+`tests/test_inference.py`. CP4-C extends it rather than starting from the stub.
 
 Tasks:
 1. `WorldModel` as in section 4.10: loads a checkpoint plus config, uses EMA weights, `channels_last`, optional bf16/fp16 autocast, optional `torch.compile`, and batched CFG.

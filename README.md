@@ -3,6 +3,70 @@
 An action-conditioned diffusion world model of Atari Space Invaders. See `ROADMAP.md` for the plan
 and `CLAUDE.md` for how to work in this repo.
 
+## Milestone 1
+
+Milestone 1 compares a baseline, **copy-last-frame** (0 parameters), with a simple model, the
+**`small` EDM U-Net** (14,263,683 parameters, 20k training steps), on the same 64 held-out val
+windows. Everything is in `notebooks/milestone1.ipynb`; saved results are in `results/milestone1/`.
+
+**1. Get the code**
+
+```bash
+git clone https://github.com/Syed-Masrur-Ahmed/Diffusion-Space-Invaders.git
+cd Diffusion-Space-Invaders
+git checkout milestone1
+```
+
+**2. Install.** Use **Python 3.13**. `pyproject.toml` allows 3.13 and newer, but pygame has no
+Python 3.14 wheels on macOS, so 3.13 is the supported version. Either:
+
+```bash
+bash setup.sh && source .venv/bin/activate                              # needs python3.13 on PATH
+# or, with uv:
+uv venv --python 3.13 .venv && source .venv/bin/activate && uv pip install -r requirements.txt
+```
+
+Then install PyTorch for your machine with the command from
+[pytorch.org](https://pytorch.org/get-started/locally/) (the default build on a laptop, the CUDA
+build on a GPU machine).
+
+**3. Download the checkpoint** (224 MB) from <CHECKPOINT_URL> and save it as
+`runs/20261105-0558_debug_small/checkpoints/ckpt_last.pt`:
+
+```bash
+mkdir -p runs/20261105-0558_debug_small/checkpoints
+# move the downloaded file to runs/20261105-0558_debug_small/checkpoints/ckpt_last.pt
+```
+
+**4. Get the data** (`data/debug/`, 740 MB, 12 HDF5 shards) from <DATA_URL> and unpack it so
+the shards are at `data/debug/shard_w*.h5`. Or regenerate it (about 10 minutes; downloads the
+agent policy from the Hugging Face Hub):
+
+```bash
+python scripts/collect.py --config configs/data/debug.yaml --workers 4
+```
+
+Keep `--workers 4`: the shard names, and so the train/val split, depend on it. A regenerated
+dataset can still differ slightly from ours (for example with other library versions or
+hardware), so the numbers may not match `results/milestone1/` exactly and the notebook's
+match check can fail; the saved results are the reference.
+
+**5. Run the notebook**
+
+```bash
+jupyter notebook notebooks/milestone1.ipynb     # or, headless:
+jupyter nbconvert --to notebook --execute --inplace notebooks/milestone1.ipynb
+```
+
+With `RUN_EVAL = True` (the default) the notebook re-evaluates both models and checks that the
+numbers match the saved `results/milestone1/eval/*/metrics.json`. Measured on an Apple M3 laptop:
+25 s with MPS, 33 s on CPU (the notebook picks CUDA, then MPS, then CPU); expect around a minute on
+an older laptop CPU, and well under a minute on a CUDA GPU (not measured). The first run also
+downloads the AlexNet weights for LPIPS (233 MB, needs internet).
+
+To run **without the data or the checkpoint**, set `RUN_EVAL = False` in the setup cell: the
+notebook then shows the saved metrics, grids, and training curve from `results/milestone1/`.
+
 ## Setup
 
 Requires `python3.13` (pygame has no Python 3.14 wheels on macOS).
