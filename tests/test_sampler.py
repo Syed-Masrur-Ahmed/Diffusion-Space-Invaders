@@ -190,3 +190,22 @@ def test_unknown_method_raises():
 def test_default_config_matches_dataclass():
     cfg = load_config(CONFIG)
     assert from_dict(SamplerConfig, cfg["sampler"]) == SamplerConfig()
+
+
+def _accelerator() -> str | None:
+    if torch.cuda.is_available():
+        return "cuda"
+    return "mps" if torch.backends.mps.is_available() else None
+
+
+@pytest.mark.skipif(_accelerator() is None, reason="needs CUDA or MPS")
+def test_cpu_generator_gives_the_same_noise_on_any_device():
+    """The initial noise comes from the generator's device, so a CPU seed reproduces across devices."""
+    device = _accelerator()
+    edm, cond = _tiny_edm(), _cond(B=2)
+    cfg = SamplerConfig(num_steps=1)
+    cpu = sample(edm, **cond, cfg=cfg, generator=torch.Generator().manual_seed(4))
+    acc = sample(edm.to(device), **{k: v.to(device) for k, v in cond.items()}, cfg=cfg,
+                 generator=torch.Generator().manual_seed(4))
+    assert acc.device.type == device
+    torch.testing.assert_close(acc.cpu(), cpu, atol=1e-4, rtol=1e-4)
