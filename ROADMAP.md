@@ -127,7 +127,7 @@ to see what already exists.
 - `scripts/smoke_cp2.py` (integration): `make_dataloader` over `data/debug/` into
   `EDMDenoiser(TinyDenoiserNet)`, 200 CPU steps, checks finite and decreasing loss.
 
-**CP3 (merged 2026-11-04, details in `progress/cp3-A.md`, `cp3-B.md`, `cp3-C.md`; integration checks pending, see 1.5):**
+**CP3 (merged 2026-11-04, details in `progress/cp3-A.md`, `cp3-B.md`, `cp3-C.md`; integration checks done 2026-11-05, see 1.5):**
 
 - `wm/eval/metrics.py`: per-image `psnr` (capped at 100 dB), `ssim`, `lpips` (alex, lazy and
   cached per device) on [0,1] `(N,C,H,W)`. `wm/eval/baselines.py`: `CopyLastFrame`.
@@ -155,10 +155,11 @@ to see what already exists.
 
 **Carried over to CP4:**
 
-- **CP3 integration checks are still open** (they need Discovery):
-  the 50k-step `debug.yaml` run, `eval_single_step.py` on its checkpoint against copy-last,
-  and the sample-grid check. Commands are in `progress/cp3-B.md` (Follow-ups). Do the
-  `model.arch=tiny` smoke job (`--set name=debug_tiny`) first.
+- CP3 integration checks ran on a ~20k-step `small` checkpoint, not the planned 50k
+  (`runs/20261105-0558_debug_small`). The model's SSIM (0.743) is well below copy-last's (0.964)
+  because of faint speckle on the black background; one sample also gets a score digit wrong.
+  Check whether more steps or more sampler steps (CP4-C benchmark) fix this. Rerun the eval on
+  the same 2,048 windows as the copy-last row, not only 64.
 - CP4-C: `WorldModel` already loads checkpoints and samples (see CP3 above). CP4-C still owns
   `wm/inference.py` and adds `channels_last`, optional bf16/fp16 autocast, and the benchmark.
   Checkpoint layout: `model` and `ema` are the **network** state dicts (UNet keys, no
@@ -246,8 +247,8 @@ The integrator adds rows at each checkpoint.
 | 2026-11-04 | CP3 | Copy-last baseline, `data/debug/` val, 2,048 evenly spaced windows (CP3-A): PSNR 35.45 ± 0.78 dB (median 31.06; 6.8% of windows identical, at the 100 dB cap), SSIM 0.9673 ± 0.0015, LPIPS 0.0105 ± 0.0006 (mean ± 95% CI). Grid: `docs/figures/cp3_copy_last_grid.png`. |
 | 2026-11-04 | CP3 | U-Net parameters (C=3, K=4): `small` 14.26M at 84, 22.92M at 96; `base` 34.35M at 84, 52.85M at 96. Batch-64 forward of `small` at 84 on an M3: 5.8 s CPU, 0.95 s MPS. GPU timing test not yet run on Discovery. |
 | 2026-11-04 | CP3 | Integration on `main`: `train.py --config configs/train/debug.yaml --dry-run` builds the real `small` U-Net (14,263,683 parameters) and runs 5 steps, a val pass and EMA sampling on `data/debug/` (CPU). Tiny-net run, 300 CPU steps on `data/debug/`: loss 1.15 → 0.19, val loss 0.16 (CP3-B). |
-| 2026-11-04 | CP3 | **Pending:** the 50k-step Discovery run, model vs copy-last on `eval_single_step.py`, and the sample-grid check. |
 | 2026-11-05 | CP3 | `cp3/loader` merged: fast suite 242 passed. Pipeline check: a 200-step tiny-net run on `data/debug/` loads through `WorldModel.from_checkpoint` into `eval_single_step.py` (256 val windows; metrics.json and grid.png written). |
+| 2026-11-05 | CP3 | **Integration check** (Discovery, CUDA): `small` U-Net trained ~20k steps on `debug.yaml` (`runs/20261105-0558_debug_small`), `eval_single_step.py` on 64 evenly spaced `data/debug/` val windows, EMA, default sampler (Euler, N=3). Model: PSNR 34.36 ± 1.06 dB, SSIM 0.743 ± 0.014, LPIPS 0.0071 ± 0.0024. Copy-last on the same 64 windows: PSNR 34.29 ± 1.08 (6.25% at the 100 dB cap), SSIM 0.964 ± 0.002, LPIPS 0.0122 ± 0.0007 (mean ± 95% CI). The model beats copy-last on LPIPS and ties on PSNR; SSIM is lower because of background speckle. Grid: `docs/figures/cp3_model_grid.png` (predictions track bullets and formation moves). |
 
 ---
 
