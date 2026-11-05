@@ -1,0 +1,37 @@
+{
+  "model": "runs/20261105-0558_debug_small/checkpoints/ckpt_last.pt",
+  "split": "val",
+  "n": 64,
+  "val_windows": 26090,
+  "dataset_dirs": [
+    "data/debug"
+  ],
+  "K": 4,
+  "C": 3,
+  "num_steps": null,
+  "cfg_scale": null,
+  "seed": 0,
+  "device": "cpu",
+  "seconds": 22.36456166600692,
+  "metrics": {
+    "psnr": {
+      "mean": 33.8427337706089,
+      "std": 4.610572792298538,
+      "ci95": 1.129590334113142,
+      "n": 64,
+      "capped_fraction": 0.0
+    },
+    "ssim": {
+      "mean": 0.7400579769164324,
+      "std": 0.059291651715755046,
+      "ci95": 0.014526454670359986,
+      "n": 64
+    },
+    "lpips": {
+      "mean": 0.008087319588412356,
+      "std": 0.010475825506527705,
+      "ci95": 0.0025665772490992876,
+      "n": 64
+    }
+  }
+}
