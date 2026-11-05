@@ -18,3 +18,8 @@ tensorboard>=2.15
 
 # This repo's own package, so scripts/*.py can import wm (needs pyproject.toml).
 -e .
+
+# Milestone 1 notebook (notebooks/milestone1.ipynb), run with jupyter nbconvert --execute.
+jupyter>=1.0
+nbconvert>=7.0
+ipykernel>=6.0

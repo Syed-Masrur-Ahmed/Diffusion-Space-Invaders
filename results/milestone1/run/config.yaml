@@ -1,0 +1,61 @@
+name: debug_small
+seed: 0
+data:
+  root: data
+  dirs:
+  - debug
+  K: 4
+  batch_size: 64
+  num_workers: 6
+  grayscale: false
+  val_fraction: 0.05
+  in_memory: false
+model:
+  arch: unet
+  ch:
+  - 64
+  - 128
+  - 256
+  n_res: 2
+  emb_dim: 256
+  n_levels: 10
+  attn_lowest: false
+  dropout: 0.0
+  tiny_hidden: 16
+edm:
+  sigma_data: 0.5
+  p_mean: -0.4
+  p_std: 1.2
+  sigma_min: 0.002
+  sigma_max: 20.0
+sampler:
+  num_steps: 3
+  sigma_min: 0.002
+  sigma_max: 5.0
+  rho: 7.0
+  method: euler
+train:
+  steps: 20000
+  lr: 0.0001
+  betas:
+  - 0.9
+  - 0.999
+  weight_decay: 0.01
+  warmup_steps: 1000
+  lr_schedule: constant
+  grad_clip: 1.0
+  grad_accum: 1
+  ema_decay: 0.999
+  p_action_drop: 0.1
+  aug_max: 0.0
+  ctx_noise_mode: shared
+  compile: false
+  allow_mps: false
+  runs_dir: runs
+  log_every: 50
+  val_every: 1000
+  val_windows: 2048
+  sample_every: 2500
+  n_samples: 8
+  save_every: 1000
+  keep_last: 3

@@ -70,19 +70,9 @@ def _model_tag(spec: str) -> str:
     return f"{path.parent.parent.name}_{path.stem}"
 
 
-def main(argv: list[str] | None = None) -> Path:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--config", type=Path, required=True)
-    parser.add_argument("--set", dest="overrides", action="append", default=[], help="key=value override")
-    parser.add_argument("--model", help="copy_last or a checkpoint path (overrides the config)")
-    parser.add_argument("--n", type=int, help="number of val windows (overrides the config)")
-    args = parser.parse_args(argv)
-    cfg = load_config(args.config, args.overrides)
-    spec = args.model or str(cfg["model"])
-    n = args.n or int(cfg["n"])
+def run(spec: str, cfg: dict, n: int, device: torch.device) -> tuple[dict, dict]:
+    """Evaluate `spec` (copy_last or a checkpoint path) on `n` val windows: (metrics.json dict, grid tensors)."""
     data = cfg["data"]
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
     if spec == "copy_last":
         model, K, grayscale = None, int(data["K"]), bool(data["grayscale"])
     else:
@@ -98,7 +88,7 @@ def main(argv: list[str] | None = None) -> Path:
         raise ValueError(f"model frames are {model.H}x{model.W}, dataset frames are {H}x{W}")
 
     indices = pick_indices(len(dataset), n)
-    generator = torch.Generator(device).manual_seed(int(cfg["seed"]))
+    generator = torch.Generator().manual_seed(int(cfg["seed"]))  # CPU, so results match across devices
     start = time.perf_counter()
     out = evaluate(model, dataset, indices, list(cfg["metrics"]), int(data["batch_size"]), device,
                    int(data["num_workers"]), cfg["num_steps"], cfg["cfg_scale"], generator)
@@ -111,12 +101,27 @@ def main(argv: list[str] | None = None) -> Path:
               "dataset_dirs": list(data["dataset_dirs"]), "K": K, "C": C, "num_steps": cfg["num_steps"],
               "cfg_scale": cfg["cfg_scale"], "seed": cfg["seed"], "device": str(device),
               "seconds": seconds, "metrics": metrics}
+    return result, out["grid"]
+
+
+def main(argv: list[str] | None = None) -> Path:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--config", type=Path, required=True)
+    parser.add_argument("--set", dest="overrides", action="append", default=[], help="key=value override")
+    parser.add_argument("--model", help="copy_last or a checkpoint path (overrides the config)")
+    parser.add_argument("--n", type=int, help="number of val windows (overrides the config)")
+    args = parser.parse_args(argv)
+    cfg = load_config(args.config, args.overrides)
+    spec = args.model or str(cfg["model"])
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    result, grid = run(spec, cfg, args.n or int(cfg["n"]), device)
+
     out_dir = Path(cfg["out_dir"]) / _model_tag(spec)
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "metrics.json").write_text(json.dumps(result, indent=2))
-    save_grid(out_dir / "grid.png", out["grid"]["context"], out["grid"]["target"], out["grid"]["pred"])
-    print(f"{spec} on {len(indices)} of {len(dataset)} val windows ({seconds:.0f} s): " + ", ".join(
-        f"{k} {m['mean']:.4f} ± {m['ci95']:.4f}" for k, m in metrics.items()))
+    save_grid(out_dir / "grid.png", grid["context"], grid["target"], grid["pred"])
+    print(f"{spec} on {result['n']} of {result['val_windows']} val windows ({result['seconds']:.0f} s): " + ", ".join(
+        f"{k} {m['mean']:.4f} ± {m['ci95']:.4f}" for k, m in result["metrics"].items()))
     print(f"Wrote {out_dir / 'metrics.json'} and {out_dir / 'grid.png'}")
     return out_dir
 

@@ -50,6 +50,7 @@ def sample(denoiser: EDMDenoiser, context: Tensor, actions: torch.LongTensor,
     """Generate the next frame (B,C,H,W) in [-1,1]; cfg_scale=1 takes the single-pass path.
 
     `context` is (B,K,C,H,W) or flattened (B,K*C,H,W). The caller sets eval() and picks EMA weights.
+    `generator` may live on any device; pass a CPU one for noise that is the same on every device.
     """
     if cfg.method not in ("euler", "heun"):
         raise ValueError(f"unknown sampler method {cfg.method!r}; use 'euler' or 'heun'")
@@ -61,8 +62,10 @@ def sample(denoiser: EDMDenoiser, context: Tensor, actions: torch.LongTensor,
     def D(x: Tensor, sigma: float) -> Tensor:
         return _guided_denoise(denoiser, x, sigma, context, actions, ctx_level, cfg_scale)
 
-    x = sigmas[0] * torch.randn((B, C, H, W), generator=generator, device=context.device,
-                                dtype=context.dtype)
+    # Noise is drawn on the generator's device, so a CPU generator gives the same x_0 on any device.
+    noise_device = generator.device if generator is not None else context.device
+    x = sigmas[0] * torch.randn((B, C, H, W), generator=generator, device=noise_device,
+                                dtype=context.dtype).to(context.device)
     for s0, s1 in zip(sigmas[:-1], sigmas[1:]):
         d = (x - D(x, s0)) / s0
         x_next = x + (s1 - s0) * d
