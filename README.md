@@ -61,7 +61,10 @@ jupyter nbconvert --to notebook --execute --inplace notebooks/milestone1.ipynb
 With `RUN_EVAL = True` (the default) the notebook re-evaluates both models and checks that the
 numbers match the saved `results/milestone1/eval/*/metrics.json`. Measured on an Apple M3 laptop:
 25 s with MPS, 33 s on CPU (the notebook picks CUDA, then MPS, then CPU); expect around a minute on
-an older laptop CPU, and well under a minute on a CUDA GPU (not measured). The first run also
+an older laptop CPU, and well under a minute on a CUDA GPU (not measured). Section 6 (memorization
+check) adds about 3 minutes on MPS or a GPU, where it fine-tunes the model on 20 training windows;
+on CPU it shows the saved run from `results/milestone1/memorize/` instead (set `MEMORIZE = True`
+to force it, 15 to 30 minutes). The first run also
 downloads the AlexNet weights for LPIPS (233 MB, needs internet).
 
 To run **without the data or the checkpoint**, set `RUN_EVAL = False` in the setup cell: the
