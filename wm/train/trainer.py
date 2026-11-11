@@ -76,8 +76,8 @@ class TrainSection:
     grad_accum: int = 1
     ema_decay: float = 0.999
     p_action_drop: float = 0.1
-    aug_max: float = 0.0  # CP4-B
-    ctx_noise_mode: str = "shared"  # CP4-B
+    aug_max: float = 0.0  # context noise (4.8); 0 disables it
+    ctx_noise_mode: str = "shared"  # shared | per_frame
     compile: bool = False
     allow_mps: bool = False
     runs_dir: str = "runs"
@@ -110,6 +110,10 @@ def load_run_config(path: str | Path, overrides: list[str] = ()) -> RunConfig:
         raise ValueError(f"model.arch must be 'unet' or 'tiny', got {cfg.model.arch!r}")
     if cfg.train.lr_schedule not in ("constant", "cosine"):
         raise ValueError(f"train.lr_schedule must be 'constant' or 'cosine', got {cfg.train.lr_schedule!r}")
+    if cfg.train.ctx_noise_mode not in ("shared", "per_frame"):
+        raise ValueError(f"train.ctx_noise_mode must be 'shared' or 'per_frame', got {cfg.train.ctx_noise_mode!r}")
+    if cfg.train.aug_max < 0 or (cfg.train.aug_max > 0 and cfg.model.n_levels < 2):
+        raise ValueError(f"train.aug_max must be >= 0 (and > 0 needs model.n_levels >= 2), got {cfg.train.aug_max}")
     return cfg
 
 
@@ -119,6 +123,21 @@ def drop_actions(actions: torch.LongTensor, p: float) -> torch.LongTensor:
         return actions
     drop = torch.rand(actions.shape[0]) < p  # global CPU RNG, saved in rng_states
     return torch.where(drop[:, None].to(actions.device), torch.full_like(actions, NULL_ACTION), actions)
+
+
+def context_noise(context: Tensor, n_levels: int, aug_max: float, mode: str) -> tuple[Tensor, torch.LongTensor]:
+    """Noisy context and its (B, K) levels: level ~ U{0..n_levels-1}, context + level/(n_levels-1)*aug_max*eps (4.8).
+
+    `context` is (B, K, ...). `mode` "shared" uses one level per sample, "per_frame" one per frame.
+    aug_max = 0 returns the context itself and zero levels without drawing any random numbers.
+    """
+    B, K = context.shape[:2]
+    if aug_max == 0:
+        return context, torch.zeros(B, K, dtype=torch.long, device=context.device)
+    # Global RNGs (levels on CPU, eps on the context's device), so they are saved in rng_states.
+    level = torch.randint(n_levels, (B, 1) if mode == "shared" else (B, K)).expand(B, K).to(context.device)
+    sigma = (level.to(context.dtype) * (aug_max / (n_levels - 1))).view(B, K, *[1] * (context.dim() - 2))
+    return context + sigma * torch.randn_like(context), level  # not clamped: noise may leave [-1, 1]
 
 
 class EpochBatchSampler(Sampler[list[int]]):
@@ -281,6 +300,9 @@ class Trainer:
         C, H = self.grid_batch["target"].shape[1:3]
         self.net = build_net(cfg.model, C, d.K, H).to(self.device)
         print(f"model {cfg.model.arch}: {sum(p.numel() for p in self.net.parameters()):,} parameters on {self.device}")
+        # Context noise levels come from model.n_levels only; check the net's level embedding has that many rows.
+        tables = {m.num_embeddings for name, m in self.net.named_modules() if name.rsplit(".", 1)[-1] == "level_emb"}
+        assert tables == {cfg.model.n_levels}, f"net level embeddings {tables} != model.n_levels {cfg.model.n_levels}"
         self.ema_net = copy.deepcopy(self.net).requires_grad_(False).eval()
         self.denoiser = EDMDenoiser(torch.compile(self.net) if t.compile else self.net, cfg.edm)
         self.ema_denoiser = EDMDenoiser(self.ema_net, cfg.edm)
@@ -297,31 +319,49 @@ class Trainer:
 
             self.tb = SummaryWriter(str(run_dir / "tb"))
 
-    def _inputs(self, batch: dict, drop: bool) -> tuple[Tensor, Tensor, Tensor, Tensor]:
-        """(target, context, actions, ctx_level) on the device; action dropout only when `drop`."""
-        actions = drop_actions(batch["actions"], self.cfg.train.p_action_drop) if drop else batch["actions"]
+    def _inputs(self, batch: dict, augment: bool) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+        """(target, context, actions, ctx_level) on the device; action dropout and context noise only when `augment`.
+
+        Without `augment` (val loss, sample grids) the context is clean and ctx_level is 0.
+        """
+        t = self.cfg.train
+        actions = drop_actions(batch["actions"], t.p_action_drop) if augment else batch["actions"]
         target, context, actions = (x.to(self.device, non_blocking=True)
                                     for x in (batch["target"], batch["context"], actions))
-        return target, context, actions, torch.zeros_like(actions)  # ctx noise is CP4-B
+        context, ctx_level = context_noise(context, self.cfg.model.n_levels, t.aug_max if augment else 0.0,
+                                           t.ctx_noise_mode)
+        return target, context, actions, ctx_level
 
     def train_step(self, batches: list[dict]) -> dict:
         """One optimizer step over `batches` (gradient accumulation), then the EMA update."""
         self.net.train()
         self.opt.zero_grad(set_to_none=True)
-        pers, sigmas = [], []
+        pers, sigmas, levels = [], [], []
         for batch in batches:
             with self.autocast():
-                per, sigma = self.denoiser.loss_terms(*self._inputs(batch, drop=True))
+                *inputs, ctx_level = self._inputs(batch, augment=True)
+                per, sigma = self.denoiser.loss_terms(*inputs, ctx_level)
             (per.float().mean() / len(batches)).backward()
             pers.append(per.detach().float())
             sigmas.append(sigma.detach())
+            levels.append(ctx_level.cpu())
         grad_norm = torch.nn.utils.clip_grad_norm_(self.net.parameters(), self.cfg.train.grad_clip)
         self.opt.step()
         self.sched.step()
         self.step += 1
         self._update_ema()
         per = torch.cat(pers)
-        return {"loss": per.mean().item(), "grad_norm": grad_norm.item(), "per": per, "sigma": torch.cat(sigmas)}
+        return {"loss": per.mean().item(), "grad_norm": grad_norm.item(), "per": per, "sigma": torch.cat(sigmas),
+                "ctx_level": torch.cat(levels)}
+
+    def _log_ctx_levels(self, window: list[dict], step: int) -> None:
+        """Histogram of the sampled context levels, and the train loss per level of the newest context frame."""
+        levels = torch.cat([o["ctx_level"] for o in window])
+        n = self.cfg.model.n_levels
+        self.tb.add_histogram("train/ctx_level", levels.flatten(), step, bins=np.arange(n + 1) - 0.5)
+        per, last = torch.cat([o["per"] for o in window]).cpu(), levels[:, -1]  # last = the sample's level if shared
+        for lv in last.unique().tolist():
+            self.tb.add_scalar(f"loss_by_ctx_level/{lv}", per[last == lv].mean().item(), step)
 
     @torch.no_grad()
     def _update_ema(self) -> None:
@@ -337,7 +377,7 @@ class Trainer:
         cuda = [self.device.index or 0] if self.device.type == "cuda" else []
         with torch.random.fork_rng(devices=cuda), _eval_mode(self.denoiser), torch.inference_mode(), self.autocast():
             torch.manual_seed(seed)
-            per, _ = self.denoiser.loss_terms(*self._inputs(batch, drop=False))
+            per, _ = self.denoiser.loss_terms(*self._inputs(batch, augment=False))
         return per.float().mean().item()
 
     def val_loss(self) -> float | None:
@@ -352,7 +392,7 @@ class Trainer:
 
     def sample_grid_predictions(self) -> Tensor:
         """EMA-model samples for the fixed grid windows, default sampler, fixed generator seed."""
-        target, context, actions, ctx_level = self._inputs(self.grid_batch, drop=False)
+        target, context, actions, ctx_level = self._inputs(self.grid_batch, augment=False)
         gen = torch.Generator(device=self.device).manual_seed(self.cfg.seed)
         with _eval_mode(self.ema_denoiser), torch.inference_mode(), self.autocast():
             return sample(self.ema_denoiser, context, actions, ctx_level, self.cfg.sampler, generator=gen).float()
@@ -421,6 +461,7 @@ class Trainer:
                     self.tb.add_scalar(f"train/{name}", value, s)
                 for bucket, value in buckets.items():
                     self.tb.add_scalar(f"loss_by_sigma/{bucket}", value, s)
+                self._log_ctx_levels(window, s)
                 window, n_seen, t0 = [], 0, time.perf_counter()
             if s % t.val_every == 0 and (val := self.val_loss()) is not None:
                 print(f"step {s} val_loss {val:.4f}", flush=True)
