@@ -66,7 +66,7 @@ Commands (macOS arm64, M3, Python 3.13.2, CPU):
   | grad norm at step 50,000 | 0.053 | 0.277 |
   | val loss (clean context), steps 48k / 49k / 50k | 0.0015 / 0.0012 / 0.0015 | 0.0014 / 0.0014 / 0.0020 |
   | final sample grid | `runs/20261117-0431_debug_noaug/samples/step_0050000.png` | `runs/20261117-0431_debug_aug/samples/step_0050000.png` |
-  | level histogram | n/a (all 0) | TensorBoard `train/ctx_level` (not yet inspected) |
+  | level histogram | n/a (all 0) | TensorBoard `train/ctx_level`: flat over 0-9 (checked visually) |
 
   - Run dirs and checkpoints are on Discovery under the repo's `runs/`. Data: `--set data.root=/dartfs-hpc/scratch/f0079km/wm/data/`.
   - Throughput is ~1.3× the CP3 run (292 samples/s), so a 50k run takes ~2.4 h on an L40S.
@@ -118,7 +118,7 @@ done
 None.
 
 ## Follow-ups
-- Look at the aug run's `train/ctx_level` histogram (should be flat over 0-9) and `loss_by_ctx_level/*` in TensorBoard, and compare the two `step_0050000.png` grids.
+- Optional: compare the two `step_0050000.png` grids and the aug run's `loss_by_ctx_level/*` curves.
 - Record the `gpuq` limits for ROADMAP 1.4: 5-day time limit; GPUs `nvidia_l40s` (8 per node) and `nvidia_a100_80gb_pcie_3g.40gb` MIG slices (4).
 - Integration (CP4-A's `eval_rollouts.py`): horizon curves for `debug_noaug` vs `debug_aug` at inference `ctx_level` ∈ {0, 1, 2}, plus copy-last.
 - CP6-B: the demo spec doesn't mention `ctx_level`, so it would use `predict_next`'s default of 0. Pass the level CP4 integration picks (from the demo config), and optionally add a key to change it live.
