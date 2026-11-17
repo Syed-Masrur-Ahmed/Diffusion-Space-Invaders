@@ -8,7 +8,7 @@
 - `Trainer._inputs(batch, augment)` (renamed from `drop`) applies action dropout and context noise to training batches only. The two are independent draws. Val loss and EMA sample grids use clean context with `ctx_level = 0`.
 - Logging, every `log_every` steps: TensorBoard histogram `train/ctx_level` (bins centred on 0..n_levels-1) and scalars `loss_by_ctx_level/<l>` (no extra forward passes), on top of the existing loss and loss-by-σ scalars.
 - `configs/train/debug_noaug.yaml` and `configs/train/debug_aug.yaml`: full copies of `debug.yaml` that differ only in `name` and `train.aug_max` (0 vs 0.7, both `shared`).
-- Not done yet: the two 50k-step Discovery runs (Syed submits; commands below).
+- Both 50k-step Discovery runs finished on 2026-11-17 (`runs/20261117-0431_debug_noaug`, `runs/20261117-0431_debug_aug`). The horizon comparison runs at CP4 integration.
 
 ## Files
 - Modified: `wm/train/trainer.py` (`context_noise`, `_inputs`, `train_step` returns `ctx_level`, `_log_ctx_levels`, config validation, `n_levels` check).
@@ -51,16 +51,28 @@ Commands (macOS arm64, M3, Python 3.13.2, CPU):
   | σ_aug | 0 | 0.0778 | 0.1556 | 0.2333 | 0.3111 | 0.3889 | 0.4667 | 0.5444 | 0.6222 | 0.7 |
   | uint8 | 0 | 9.9 | 19.8 | 29.8 | 39.7 | 49.6 | 59.5 | 69.4 | 79.3 | 89.3 |
 
-- **Discovery runs (to fill in after training):**
+- **Discovery runs** (2026-11-17, `gpuq`, one NVIDIA L40S each on node `l40sx8`, both started 04:31):
 
   | | `debug_noaug` | `debug_aug` |
   |---|---|---|
-  | run dir | `runs/<stamp>_debug_noaug` | `runs/<stamp>_debug_aug` |
-  | final EMA checkpoint | `runs/<stamp>_debug_noaug/checkpoints/ckpt_last.pt` (`ema`) | `runs/<stamp>_debug_aug/checkpoints/ckpt_last.pt` (`ema`) |
-  | steps reached | | |
-  | final train loss | | |
-  | final val loss (clean context) | | |
-  | level histogram | n/a (all 0) | TensorBoard `train/ctx_level` |
+  | config | `configs/train/debug_noaug.yaml` (`aug_max` 0) | `configs/train/debug_aug.yaml` (`aug_max` 0.7, shared) |
+  | Slurm job | 11093964 | 11093965 |
+  | run dir | `runs/20261117-0431_debug_noaug` | `runs/20261117-0431_debug_aug` |
+  | final EMA checkpoint | `runs/20261117-0431_debug_noaug/checkpoints/ckpt_last.pt` (`ema`) | `runs/20261117-0431_debug_aug/checkpoints/ckpt_last.pt` (`ema`) |
+  | steps reached | 50,000 (`finished at step 50000`, one job, no resume) | 50,000 (same) |
+  | wall time | 2 h 22 min (last checkpoint 06:53) | 2 h 25 min (06:56) |
+  | throughput (median logged) | 387 samples/s | 383 samples/s |
+  | train loss at step 50,000 (last 50 steps) | 0.0010 | 0.0018 |
+  | grad norm at step 50,000 | 0.053 | 0.277 |
+  | val loss (clean context), steps 48k / 49k / 50k | 0.0015 / 0.0012 / 0.0015 | 0.0014 / 0.0014 / 0.0020 |
+  | final sample grid | `runs/20261117-0431_debug_noaug/samples/step_0050000.png` | `runs/20261117-0431_debug_aug/samples/step_0050000.png` |
+  | level histogram | n/a (all 0) | TensorBoard `train/ctx_level` (not yet inspected) |
+
+  - Run dirs and checkpoints are on Discovery under the repo's `runs/`. Data: `--set data.root=/dartfs-hpc/scratch/f0079km/wm/data/`.
+  - Throughput is ~1.3× the CP3 run (292 samples/s), so a 50k run takes ~2.4 h on an L40S.
+  - **Train loss is not comparable across the runs:** the aug run's train loss includes samples with noisy context (levels 1-9), which are harder. Its higher grad norm fits that.
+  - **Val loss (clean context) is close:** both are in 0.0012-0.0020 over the last 3k steps. The step-to-step variation (noaug 0.0012 → 0.0015, aug 0.0014 → 0.0020) is about as large as the gap, so one-step val loss does not separate the runs. The aug model spends some capacity on noisy contexts, so a slightly higher clean-context loss is expected. The test that matters is the rollout horizon curve.
+  - `aug_max`, mode and seed are taken from each job's config line. Checking them from the checkpoints (`grep -A3 aug_max runs/20261117-0431_debug_*/config.yaml`) was not done; the first try ran without the venv.
 
 ## Training on Discovery (for Syed)
 Both runs start fresh from step 0 with `seed: 0` on the same data. Don't reuse `runs/20261105-0558_debug_small`.
@@ -106,7 +118,9 @@ done
 None.
 
 ## Follow-ups
-- Fill in the Discovery results table after both runs finish (run dirs, steps, final train/val loss, a screenshot or export of the `train/ctx_level` histogram).
+- Look at the aug run's `train/ctx_level` histogram (should be flat over 0-9) and `loss_by_ctx_level/*` in TensorBoard, and compare the two `step_0050000.png` grids.
+- Record the `gpuq` limits for ROADMAP 1.4: 5-day time limit; GPUs `nvidia_l40s` (8 per node) and `nvidia_a100_80gb_pcie_3g.40gb` MIG slices (4).
 - Integration (CP4-A's `eval_rollouts.py`): horizon curves for `debug_noaug` vs `debug_aug` at inference `ctx_level` ∈ {0, 1, 2}, plus copy-last.
+- CP6-B: the demo spec doesn't mention `ctx_level`, so it would use `predict_next`'s default of 0. Pass the level CP4 integration picks (from the demo config), and optionally add a key to change it live.
 - Still open from CP3: the HDF5 worker close hook in `wm/data/dataset.py` (out of scope here).
 - CP6-C ablation: `per_frame` mode is implemented and tested, but no run uses it yet.
