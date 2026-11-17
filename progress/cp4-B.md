@@ -72,7 +72,7 @@ Commands (macOS arm64, M3, Python 3.13.2, CPU):
   - Throughput is ~1.3× the CP3 run (292 samples/s), so a 50k run takes ~2.4 h on an L40S.
   - **Train loss is not comparable across the runs:** the aug run's train loss includes samples with noisy context (levels 1-9), which are harder. Its higher grad norm fits that.
   - **Val loss (clean context) is close:** both are in 0.0012-0.0020 over the last 3k steps. The step-to-step variation (noaug 0.0012 → 0.0015, aug 0.0014 → 0.0020) is about as large as the gap, so one-step val loss does not separate the runs. The aug model spends some capacity on noisy contexts, so a slightly higher clean-context loss is expected. The test that matters is the rollout horizon curve.
-  - `aug_max`, mode and seed are taken from each job's config line. Checking them from the checkpoints (`grep -A3 aug_max runs/20261117-0431_debug_*/config.yaml`) was not done; the first try ran without the venv.
+  - Checked from each `ckpt_last.pt`: `debug_noaug` step 50000, `aug_max` 0.0, shared, seed 0; `debug_aug` step 50000, `aug_max` 0.7, shared, seed 0.
 
 ## Training on Discovery (for Syed)
 Both runs start fresh from step 0 with `seed: 0` on the same data. Don't reuse `runs/20261105-0558_debug_small`.
