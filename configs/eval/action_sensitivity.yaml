@@ -1,0 +1,25 @@
+# Action sensitivity (ROADMAP CP5-C): mean |LEFT - RIGHT| in the player band, one shared noise seed.
+#   python scripts/action_sensitivity.py --config configs/eval/action_sensitivity.yaml \
+#       --set model=runs/<run>/checkpoints/ckpt_last.pt
+# CP4 checkpoints still store num_steps 3. Pass --set num_steps=2 for those (D11).
+model: null                 # checkpoint path (--model or --set model= overrides)
+n: 64                       # val windows, spread evenly over the split
+weights: [1, 1.5, 2, 3]     # action CFG weights; 1 is the plain conditional path
+num_steps: 2                # D11 Euler steps; null would use the checkpoint's own count
+ctx_level: 0                # inference context-noise level (D22)
+seed: 0                     # re-seeded for the LEFT call and the RIGHT call
+gain: 0.8                   # smallest w that reaches this fraction of the rise from the smallest w
+ignore_below: 0.5           # 8-bit MAE above copy-last; at or below it, actions count as ignored
+grid_n: 4                   # LEFT | RIGHT grids for the first this many windows
+include_copy_last: true
+use_ema: true
+channels_last: true
+out_dir: runs/action_sensitivity
+data:
+  dataset_dirs: [data/debug]
+  K: 4                      # a checkpoint's own K and C are used; this must match the shards
+  grayscale: false
+  val_fraction: 0.05        # must match training (4.5)
+  batch_size: 8
+band_raw: [185, 195]        # player sprite rows on the 210-tall raw screen
+raw_height: 210

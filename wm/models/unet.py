@@ -8,12 +8,19 @@ from torch import Tensor, nn
 from torch.nn import functional as F
 
 from wm.config import from_dict
+from wm.data.schema import NUM_ACTIONS
 from wm.models.embeddings import ConditionEmbedding
+
+_ACTION_INPUTS = ("adagn", "adagn+planes")
 
 
 @dataclass
 class UNetConfig:
-    """U-Net hyperparameters (4.7). `ch` depends on H: [64,128,256] for 84, [64,128,256,256] for 96."""
+    """U-Net hyperparameters (4.7). `ch` depends on H: [64,128,256] for 84, [64,128,256,256] for 96.
+
+    `action_input` "adagn" is the 4.7 conditioning. "adagn+planes" also feeds the latest action,
+    including NULL_ACTION, as NUM_ACTIONS+1 constant input planes (CP5-C).
+    """
 
     C: int
     K: int
@@ -24,6 +31,7 @@ class UNetConfig:
     n_levels: int = 10
     attn_lowest: bool = False
     dropout: float = 0.0
+    action_input: str = "adagn"
 
 
 def unet_config(model: dict[str, Any], C: int, K: int, H: int) -> UNetConfig:
@@ -95,17 +103,27 @@ class SelfAttention(nn.Module):
         return h + self.out(a.transpose(-1, -2).reshape(B, C, H, W))
 
 
+def _action_planes(actions: torch.LongTensor, like: Tensor) -> Tensor:
+    """One-hot of actions[:, -1] as constant planes, shape (B, NUM_ACTIONS+1, H, W)."""
+    batch, _, height, width = like.shape
+    eyes = F.one_hot(actions[:, -1], NUM_ACTIONS + 1).to(dtype=like.dtype)
+    return eyes.view(batch, NUM_ACTIONS + 1, 1, 1).expand(batch, NUM_ACTIONS + 1, height, width).contiguous()
+
+
 class UNet(nn.Module):
     """Predicts the EDM network output F from the noisy target, context frames, and conditioning."""
 
     def __init__(self, cfg: UNetConfig) -> None:
         super().__init__()
+        if cfg.action_input not in _ACTION_INPUTS:
+            raise ValueError(f"action_input must be 'adagn' or 'adagn+planes', got {cfg.action_input!r}")
         factor = 2 ** (len(cfg.ch) - 1)
         if cfg.H % factor:
             raise ValueError(f"H={cfg.H} must be divisible by 2**(len(ch) - 1) = {factor} for ch={cfg.ch}")
         self.cfg = cfg
         self.emb = ConditionEmbedding(cfg.K, cfg.n_levels, cfg.emb_dim)
-        self.conv_in = nn.Conv2d(cfg.C * (cfg.K + 1), cfg.ch[0], 3, padding=1)
+        planes = NUM_ACTIONS + 1 if cfg.action_input == "adagn+planes" else 0
+        self.conv_in = nn.Conv2d(cfg.C * (cfg.K + 1) + planes, cfg.ch[0], 3, padding=1)
 
         def block(c_in: int, c_out: int) -> ResBlock:
             return ResBlock(c_in, c_out, cfg.emb_dim, cfg.dropout)
@@ -140,7 +158,11 @@ class UNet(nn.Module):
                 ctx_level: torch.LongTensor) -> Tensor:
         """x (B,C,H,W), c_noise (B,), context (B,K*C,H,W), actions (B,K), ctx_level (B,K) -> (B,C,H,W)."""
         emb = self.emb(c_noise, actions, ctx_level)
-        h = self.conv_in(torch.cat([x, context], dim=1))
+        # The planes are the latest action only. AdaGN still sees the whole K-step sequence.
+        parts = [x, context]
+        if self.cfg.action_input == "adagn+planes":
+            parts.append(_action_planes(actions, x))
+        h = self.conv_in(torch.cat(parts, dim=1))
         skips = []
         for i, blocks in enumerate(self.encoder):
             if i > 0:
