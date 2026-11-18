@@ -4,7 +4,7 @@
 - `WorldModel.from_checkpoint` still loads a 4.12 checkpoint (`ema` or `model`, `strict=True`, optional `torch.compile`) and `predict_next` still samples under `eval()` and `inference_mode`. The network is stored channels-last, and an optional fp16 or bf16 autocast wraps the sampler. The returned frame stays float32, contiguous, and in [-1, 1].
 - The frozen positional signature is unchanged: `from_checkpoint(path, device, use_ema, compile)` and `predict_next(context, actions, num_steps, cfg_scale, ctx_level, generator)`. `channels_last` and `amp_dtype` are keyword-only. Batched action CFG is unchanged: `cfg_scale=1` is one forward pass.
 - `scripts/bench_sampling.py` times batch-1 frames/s for `num_steps ∈ {1, 2, 3, 5, 10}` × {Euler, Heun} on each requested device, and scores teacher-forced PSNR and LPIPS on val windows with `wm/eval/metrics.py`. It writes `results.json`, `results.csv`, and `quality_vs_speed.png`, and proposes the D11 step count.
-- D11 is still open. This machine has no CUDA, and it has no `data/debug` and no trained checkpoint, so there is no PSNR to compare with 10 steps.
+- CUDA benchmark done on Discovery (2026-11-17, L40S, `debug_noaug` checkpoint, see Results). The rule proposes **1 Euler step**, but quality *falls* as steps are added, so single-frame PSNR is rewarding the blurry 1-step mean. D11 stays open until the rollout check in Follow-ups is done. Heun at N=2 is broken (11.2 dB).
 
 ## Files
 Created:
@@ -90,6 +90,27 @@ CMD="python scripts/bench_sampling.py --config configs/eval/bench_sampling.yaml 
   sbatch --partition=gpuq --time=01:00:00 scripts/slurm/eval.sbatch
 ```
 
+### Discovery CUDA benchmark (2026-11-17)
+Submitted with `scripts/slurm/eval.sbatch`, one NVIDIA L40S, `gpuq`. Model `runs/20261117-0431_debug_noaug/checkpoints/ckpt_last.pt` (50k steps, EMA, CP4-B), `devices=[cuda]`, channels-last, fp32, no compile, seed 0. Quality: teacher-forced PSNR and LPIPS on 512 windows from `/dartfs-hpc/scratch/f0079km/wm/data/debug`, ±95% CI. Outputs on Discovery and copied locally (not committed): `runs/bench_sampling/cp4_noaug/{results.json,results.csv,quality_vs_speed.png}`.
+
+| method | steps | frames/s | PSNR (dB) | LPIPS |
+|---|---:|---:|---:|---:|
+| euler | 1 | 279.9 | 35.97 ± 0.45 | 0.0079 ± 0.0012 |
+| euler | 2 | 148.0 | 36.02 ± 0.45 | 0.0078 ± 0.0012 |
+| euler | 3 | 100.8 | 34.68 ± 0.42 | 0.0073 ± 0.0012 |
+| euler | 5 | 60.9 | 32.69 ± 0.38 | 0.0098 ± 0.0013 |
+| euler | 10 | 31.3 | 32.24 ± 0.37 | 0.0105 ± 0.0014 |
+| heun | 1 | 277.5 | 35.97 ± 0.45 | 0.0079 ± 0.0012 |
+| heun | 2 | 101.1 | **11.18 ± 0.10** | **0.514 ± 0.009** |
+| heun | 3 | 61.6 | 26.76 ± 0.27 | 0.0356 ± 0.0028 |
+| heun | 5 | 35.0 | 31.55 ± 0.35 | 0.0119 ± 0.0015 |
+| heun | 10 | 16.7 | 32.06 ± 0.37 | 0.0108 ± 0.0014 |
+
+- **Speed is not the constraint on CUDA.** Every Euler count and every Heun count clears 15 frames/s. Euler 10 steps is 31 frames/s.
+- **`propose_d11` output:** Euler, 1 step (35.97 dB vs the 10-step reference 32.24 dB, 280 frames/s). The rule is "fewest steps within 0.3 dB of 10 steps", and it assumes PSNR rises with steps. Here it falls by 3.7 dB from 1 to 10 steps, so the rule picks the smallest N trivially.
+- **Why PSNR falls:** one Euler step from σ_max=5 returns the denoiser's estimate of the mean next frame. Against a single ground-truth frame the mean scores best on PSNR. More steps commit to one sharp sample, which pays for every pixel it gets wrong. This is the same blur that the CP2 Gaussian oracle and the CP3 SSIM check pointed to. LPIPS is flat within the CI from 1 to 3 Euler steps and worse from 5 on. Single-frame PSNR and LPIPS can't settle D11; rollout drift and how the frames look have to.
+- **Heun N=2 looks like a bug or an ill-conditioned schedule, not a quality curve.** N=1, 3, 5, and 10 are sane. With `sigma_min=2e-3`, `sigma_max=5`, the N=2 schedule is [5, 0.002, 0]. The only Heun correction is evaluated at σ=0.002 on the Euler estimate from σ=5. The correction slope is (x − D(x))/0.002, and the averaged slope is multiplied by Δσ ≈ 5, so any mismatch in D at σ_min is amplified by ~1,250. That is a hypothesis; it was not checked in code. Heun N=3 (26.8 dB) shows a weaker version of it.
+
 ## Deviations
 - **Keyword-only arguments on `from_checkpoint`.** `channels_last: bool = True` and `amp_dtype: torch.dtype | None = None` sit after the frozen positional parameters. Existing callers, including `eval_single_step.py`, keep working. `predict_next` gained no parameters. The sampler method is switched by assigning `model.sampler` (`dataclasses.replace(..., method=...)`). `num_steps` passed to `predict_next` still keeps that method. `CopyLastFrame` is untouched.
 - **Autocast stays inside `predict_next`.** The sample is cast back to `context.dtype` and made contiguous NCHW before it is returned, so metrics and the float32 tests see the same frames as before.
@@ -101,7 +122,8 @@ CMD="python scripts/bench_sampling.py --config configs/eval/bench_sampling.yaml 
 None. The frozen positional signatures in 4.10 are unchanged.
 
 ## Follow-ups
-- **Syed / integrator:** run the `sbatch` above and record the D11 step count in section 1.3 and 1.5. The PSNR column is also the check on the CP3 carry-over: whether more than 3 Euler steps clears the background speckle that pulled SSIM down to 0.74.
+- **D11 (integrator):** don't take the 1-step proposal as is. Run CP4-A's `eval_rollouts.py` on the `debug_aug` checkpoint at `--set num_steps=1` and at 3 (the current default, already measured in `progress/cp4-B.md`: 25.3 dB at h=20, LPIPS 0.137 at h=200), compare the videos, and record the pick in sections 1.3 and 1.5. The `propose_d11` rule should probably compare on rollout LPIPS rather than one-step PSNR.
+- **Heun N=2:** check the hypothesis above with a unit test on a known Gaussian (`TinyDenoiserNet` or the CP2 oracle). Either fix the schedule for Heun (e.g. skip the correction when the next σ is `sigma_min`) or document that Heun needs N ≥ 5. That touches `wm/diffusion/sampler.py`, which is not a CP4-C file.
 - **`torch.compile`:** `from_checkpoint(..., compile=True)` still wraps the net after the channels-last conversion, and the input hook is registered on the outer module. It was not timed. `--set compile=true` on a CUDA job is the way to try it; the first call pays the compile.
 - **CP4-A:** `predict_next` takes `num_steps`, `cfg_scale`, and `ctx_level`. Euler vs Heun is `model.sampler = dataclasses.replace(model.sampler, method="heun")` before the call.
 - On this M3, leave autocast off. fp16 was slower than fp32 on CPU and on MPS, and fp16 without channels-last on CPU dropped to 0.08 frames/s in one timing. CUDA bf16 is a separate question; the trainer already uses it.
