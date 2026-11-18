@@ -53,7 +53,7 @@ def test_debug_yaml_defaults():
     assert cfg.data.dirs == ["debug"] and not cfg.data.in_memory and cfg.data.num_workers >= 4
     assert (cfg.train.p_action_drop, cfg.train.aug_max, cfg.train.ctx_noise_mode) == (0.1, 0.0, "shared")
     assert (cfg.train.lr, cfg.train.weight_decay, cfg.train.ema_decay) == (1e-4, 1e-2, 0.999)
-    assert cfg.train.keep_last == 3 and cfg.sampler.num_steps == 3 and cfg.sampler.method == "euler"
+    assert cfg.train.keep_last == 3 and cfg.sampler.num_steps == 2 and cfg.sampler.method == "euler"
 
 
 def test_action_drop_rate_and_whole_sequences():

@@ -34,7 +34,7 @@ edm:                    # copied from configs/train/edm_default.yaml
   sigma_max: 20.0
 
 sampler:                # copied from configs/train/edm_default.yaml
-  num_steps: 3
+  num_steps: 2         # D11 (CP4)
   sigma_min: 2.0e-3
   sigma_max: 5.0
   rho: 7.0

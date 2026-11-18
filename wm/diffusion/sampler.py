@@ -13,7 +13,7 @@ from wm.diffusion.edm import EDMDenoiser
 class SamplerConfig:
     """Sampler settings (4.9)."""
 
-    num_steps: int = 3
+    num_steps: int = 2  # D11 (CP4): 2 Euler steps beat 3 on rollouts
     sigma_min: float = 2e-3
     sigma_max: float = 5.0
     rho: float = 7.0

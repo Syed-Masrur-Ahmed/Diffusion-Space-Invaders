@@ -183,11 +183,12 @@ to see what already exists.
 - **Train with context noise from now on** (`aug_max` 0.7, `shared`), and sample with
   inference `ctx_level` 0. Never run a checkpoint trained with `aug_max = 0` at a level above
   0: its level embeddings 1-9 are untrained and the rollout collapses.
-- **D11 is still open.** The benchmark rule picks 1 Euler step, but teacher-forced PSNR
-  *falls* as steps increase (36.0 dB at 1 step, 32.2 at 10), because a 1-step sample is
-  close to the blurry mean frame. Keep the default at Euler N=3 until `eval_rollouts.py` on
-  the aug checkpoint at `--set num_steps=1` vs 3 (horizon curves plus videos) settles it.
-  The `propose_d11` rule should compare rollout LPIPS rather than one-step PSNR.
+- **D11 steps decided: Euler N=2** (sampler default changed from 3 in `SamplerConfig` and
+  `configs/train/{edm_default,debug,debug_aug,debug_noaug}.yaml`). Checkpoints trained before
+  this still carry `num_steps: 3` and use it when evals pass `num_steps: null`: add
+  `--set num_steps=2` for those. N=3 had faint background speckle, which is what pulled the
+  CP3 single-step SSIM down (0.74); N=1 and 2 give a clean background (rollout SSIM 0.92 at h=1).
+  Recheck the step count on the CP5 full model; N=10 holds up best beyond h≈100.
 - **Heun N=2 fails** (11.2 dB PSNR, LPIPS 0.51) while N=1, 3, 5, 10 are sane. Likely cause
   (not checked): the N=2 schedule is [5, 0.002, 0], so the only Heun correction is
   evaluated at σ_min and amplified ~1,250×. Needs a test in `wm/diffusion/sampler.py`.
@@ -203,9 +204,9 @@ to see what already exists.
 
 **Still open from CP3:**
 
-- The CP3 single-step SSIM gap (model 0.740 vs copy-last 0.964, background speckle) is not
-  re-measured on the 50k checkpoints yet. Rerun `eval_single_step.py` on the same 2,048
-  windows as the copy-last row. Checkpoint layout: `model` and `ema` are the **network**
+- The CP3 single-step SSIM gap (model 0.740 vs copy-last 0.964) came from the N=3 sampler's
+  background speckle (see D11). Still to do: rerun `eval_single_step.py` on a 50k checkpoint
+  with `--set num_steps=2` on the same 2,048 windows as the copy-last row. Checkpoint layout: `model` and `ema` are the **network**
   state dicts (UNet keys, no `net.` or `_orig_mod.` prefix); `config` is the full train
   config as a dict.
 - LPIPS needs AlexNet weights (233 MB) on first use. Discovery compute nodes may have no
@@ -246,7 +247,7 @@ to see what already exists.
 | D8 | Store RAM (128 bytes) per step for coverage stats and detector calibration. Never used as model input. Verified map in `wm/data/ram.py` (CP2-A). | Final (CP2-A) |
 | D9 | Ground truth for rollouts comes from deterministic replay (seed, no-op count, actions). Replay reproduces every stored frame, reward, life count and RAM byte exactly (CP2-A test). | Final (CP2-A) |
 | D10 | 84×84, `method="max"`. `area` keeps the laser in only 65.5% of frames at 84 and 96; `max` keeps 100% at both. 96/max keeps more alien shape (84/max turns aliens into blocks) and stays an option if sprite detail matters. | Final (CP1-A) |
-| D11 | Default sampling steps and classifier-free guidance weight. Steps: Euler N=3 stays the default for now. The CP4-C rule proposed 1 step (PSNR falls with more steps, so the rule picks the blurry mean); decide from rollout horizon curves at N=1 vs 3. CFG weight: CP5-C. | Open (CP4: steps pending rollout check) |
+| D11 | Default sampling steps and classifier-free guidance weight. **Steps: Euler N=2** (CP4). Decided on rollout horizon curves, not the one-step PSNR rule (which picked 1 because PSNR falls with steps). N=1 and 2 tie and beat N=3 at every h ≥ 5; N=2 keeps one refinement step and runs at 27 frames/s on M3 MPS (demo), 148 on an L40S. N=10 is best only beyond h≈100 (LPIPS 0.094 vs 0.117 at h=200). CFG weight: CP5-C. | Steps final (CP4); CFG open (CP5-C) |
 | D12 | Training runs on Dartmouth's Discovery cluster (Slurm), with checkpoint and auto-resume so jobs survive time limits and queue waits | Final |
 | D13 | Track owners: A = Aunonto, B = Syed, C = Michael. Syed takes B because he is the only one with Discovery access (a change from the proposal's split). | Final |
 | D14 | Python 3.13 for the venv (pygame has no 3.14 wheels on macOS), enforced by `setup.sh` | Final |
@@ -297,6 +298,7 @@ The integrator adds rows at each checkpoint.
 | 2026-11-17 | CP4 | Context-noise runs (Discovery `gpuq`, one L40S each, `small` U-Net, batch 64, 50,000 steps, seed 0): `runs/20261117-0431_debug_noaug` (`aug_max` 0) and `runs/20261117-0431_debug_aug` (`aug_max` 0.7, shared), ~2 h 25 min each at ~385 samples/s. Val loss (clean context) at 48k/49k/50k: noaug 0.0015/0.0012/0.0015, aug 0.0014/0.0014/0.0020. Aug `train/ctx_level` histogram flat over 0-9. |
 | 2026-11-17 | CP4 | **Horizon comparison** (`eval_rollouts.py`, `data/eval/`, 64 trajectories, T=200, `start` 32, EMA, Euler N=3, seed 0; L40S), ctx_level 0, PSNR dB / LPIPS. h=1: copy-last 30.2/0.007, CP3 small (20k) 34.8/0.004, noaug 35.6/0.003, aug 34.5/0.005. h=20: 18.5/0.058, 20.2/0.045, 22.8/0.031, **25.3/0.025**. h=50: 15.5/0.084, 16.6/0.078, 18.3/0.062, **20.7/0.046**. h=200: 15.8/0.231, 16.4/0.204, 16.7/0.176, 16.8/**0.137**. 95% CIs ≈ ±1-1.5 dB at h ≤ 50. Aug degrades more slowly from h≈10 (expected result met). Aug at ctx_level 0/1/2 equal within CI; noaug at 1/2 collapses (untrained level embeddings). Figure: `docs/figures/cp4_horizon.png`. |
 | 2026-11-17 | CP4 | **Sampler benchmark** (`bench_sampling.py`, noaug checkpoint, L40S, batch 1, channels-last fp32; quality on 512 `data/debug/` val windows, teacher-forced). Euler 1/2/3/5/10 steps: 280/148/101/61/31 frames/s, PSNR 36.0/36.0/34.7/32.7/32.2 dB, LPIPS 0.0079/0.0078/0.0073/0.0098/0.0105. Heun 1/2/3/5/10: 277/101/62/35/17 frames/s, PSNR 36.0/**11.2**/26.8/31.6/32.1. Every setting clears 15 frames/s. `propose_d11` → Euler 1 step; not adopted (see D11). Figure: `docs/figures/cp4_sampler_bench.png`. |
+| 2026-11-18 | CP4 | **D11 step sweep** (`eval_rollouts.py`, `debug_aug` checkpoint, ctx_level 0, same 64 `data/eval/` trajectories, T=200, seed 0; L40S; one job per N). Euler N=1/2/3/5/10, PSNR h=20: 26.7/26.6/25.3/24.5/24.5 dB; PSNR h=50: 22.7/22.7/20.7/20.7/21.1; LPIPS h=50: 0.036/0.035/0.046/0.042/0.039; LPIPS h=200: 0.115/0.117/0.137/0.108/0.094; mean over h=1..200 LPIPS 0.065/0.065/0.075/0.065/0.058, SSIM 0.73/0.73/0.55/0.53/0.53. N=3 reproduces the horizon-comparison row exactly. No N makes the model register hits (generated score stays near 0005 while the real one reaches 125-160). D11 steps = 2. Figure: `docs/figures/cp4_d11_steps.png`. |
 | 2026-11-18 | CP4 | Fast suite 288 passed after merging A, B, C (macOS arm64, CPU, Python 3.13.2). |
 
 ---
@@ -653,7 +655,7 @@ parameter count at construction.
 ### 4.9 Sampler (`wm/diffusion/sampler.py`)
 
 - **Karras schedule**: `σ_i = (σ_max^(1/ρ) + i/(N-1)·(σ_min^(1/ρ) - σ_max^(1/ρ)))^ρ` for `i = 0..N-1`, then append `σ_N = 0`.
-  - Defaults: `σ_min = 2e-3`, `σ_max = 5.0`, `ρ = 7`, `N = 3`. For N = 1 use `[σ_max, 0]`.
+  - Defaults: `σ_min = 2e-3`, `σ_max = 5.0`, `ρ = 7`, `N = 2` (D11; was 3 until CP4). For N = 1 use `[σ_max, 0]`.
 - Start from `x_0 = σ_0·ε`.
 - **Euler** (default): `d = (x - D(x; σ_i))/σ_i`, then `x ← x + (σ_{i+1} - σ_i)·d`.
 - **Heun** (option): Euler step, then a 2nd-order correction on every step except the one that ends at σ = 0.
