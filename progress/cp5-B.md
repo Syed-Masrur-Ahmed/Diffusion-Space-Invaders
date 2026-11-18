@@ -73,7 +73,7 @@ From the repo root on `cp5/B-fullrun` (or `main` after CP5), venv active. `S=/da
    python scripts/coverage_report.py $S/full --out-dir runs/coverage_full
    ```
    `coverage_report.py` names its files `cp2_coverage_*`, so give it its own `--out-dir` (the default would overwrite the CP2 figures). Targets: wave transitions ≥ 50 (D17), the other four as in CP2.
-4. **Human data** (optional, any time before training starts): copy everyone's `data/human/` shards into `$S/human/`.
+4. **Human data:** not for this run (see Deviations). Don't copy anything into `$S/human/` until the chain has finished.
 5. **Dry run, then the chain:**
    ```bash
    python scripts/train.py --config configs/train/final.yaml --dry-run --set data.root=$S
@@ -87,6 +87,7 @@ From the repo root on `cp5/B-fullrun` (or `main` after CP5), venv active. `S=/da
    ```
 
 ## Deviations
+- **No human data in the final run.** The roadmap says to include all `data/human/` shards; nobody had recorded yet, and one hour of play is ~54k steps, ~1% of `data/full`. Decision (Syed, 2026-11-18): launch on `full/` only and record human play (Aunonto `first_worker=0`, Michael `first_worker=200`, ≥ 30 min each, full games) **after** the run finishes. Then use it as a human-play test set (`eval_rollouts.py --set 'dataset_dirs=[<scratch>/data/human]'`) and optionally for a short fine-tune. `final.yaml` keeps `dirs: [full, human]`, so nothing may be copied into `<scratch>/data/human` while the chain runs: a resumed job would re-index with the new shards and silently change the data order.
 - **New test file `tests/test_fullrun.py`.** CP5-B's Owns list has no test file, and its two tests (dry run, validator) need real data. The config and chain-script checks are cheap and catch typos before a multi-day job.
 - **Batch 128, 200k steps.** The roadmap says 64–128 and "as many steps as compute allows". 200k is a starting point; adjust from the measured throughput.
 - **`keep_last: 5`.** Each `base` checkpoint is ~0.55 GB, so 5 keep 50k steps of history in ~2.75 GB under `runs/`.
@@ -98,5 +99,5 @@ None.
 ## Follow-ups
 - The chain does not wait for CP5-C: the CP4 aug model tracks the real ship to < 0.3 px over 20 steps (Results), so an `action_input` change is unlikely. If CP5-C still adds `action_input: adagn+planes`, `final.yaml` needs that key and the run restarts.
 - The missed hits (score never increases in rollouts) are the thing to watch in the intermediate `eval_rollouts.py --n 16` checks; more kills in `data/full` and the larger model are the expected fix.
-- Human play: nobody has recorded yet (target ≥ 1 h). Each person uses their own `first_worker` in `configs/data/human.yaml`.
+- Human play after the final run: Aunonto and Michael record (≥ 1 h total, games ≥ 236 steps for the T=200 rollout eval), copy to `$S/human/`, `validate_data.py`, then the human-play rollout eval.
 - Record the measured `base` throughput, the coverage table, and the final checkpoint path here.
