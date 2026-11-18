@@ -1,0 +1,31 @@
+# Sampler speed and single-step quality (ROADMAP CP4-C, decision D11).
+#   python scripts/bench_sampling.py --config configs/eval/bench_sampling.yaml \
+#       --set model=runs/<run>/checkpoints/ckpt_last.pt
+# Speed is batch-1 frames/s. Quality is teacher-forced PSNR and LPIPS on `quality_n` val windows.
+# Set quality_n: 0 to time the sampler without a dataset. cuda is skipped when this machine has none.
+model: null                  # training checkpoint (--set model=PATH)
+out_dir: runs/bench_sampling
+seed: 0                      # sampler generator, reseeded for every (device, method, steps) setting
+data:
+  dataset_dirs: [data/debug]
+  val_fraction: 0.05         # must match training (4.5)
+  batch_size: 32             # quality batches; speed is always batch 1
+  num_workers: 0
+quality_n: 512               # val windows, spread evenly; 0 skips quality and the dataset
+metrics: [psnr, lpips]
+num_steps: [1, 2, 3, 5, 10]
+methods: [euler, heun]
+devices: [cpu, cuda]         # cuda is skipped when unavailable; mps is accepted if named
+cfg_scale: null              # null = the checkpoint default (1.0, the plain CFG path)
+ctx_level: 0
+channels_last: true
+amp_dtype: null              # null | bf16 | fp16 (autocast; predict_next still returns float32)
+compile: false
+use_ema: true
+speed_warmup: 2
+speed_repeats: 10
+reference_steps: 10          # D11 compares Euler PSNR against this many steps
+psnr_tol_db: 0.3
+min_steps_per_s: 15          # real time: 15 agent steps = 1 second of game
+proposal_device: cuda        # the training GPU; no proposal if that device did not run
+proposal_method: euler       # D11 chooses a step count for the default sampler
