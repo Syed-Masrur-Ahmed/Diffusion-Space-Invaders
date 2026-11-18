@@ -8,7 +8,7 @@
 - `Trainer._inputs(batch, augment)` (renamed from `drop`) applies action dropout and context noise to training batches only. The two are independent draws. Val loss and EMA sample grids use clean context with `ctx_level = 0`.
 - Logging, every `log_every` steps: TensorBoard histogram `train/ctx_level` (bins centred on 0..n_levels-1) and scalars `loss_by_ctx_level/<l>` (no extra forward passes), on top of the existing loss and loss-by-σ scalars.
 - `configs/train/debug_noaug.yaml` and `configs/train/debug_aug.yaml`: full copies of `debug.yaml` that differ only in `name` and `train.aug_max` (0 vs 0.7, both `shared`).
-- Both 50k-step Discovery runs finished on 2026-11-17 (`runs/20261117-0431_debug_noaug`, `runs/20261117-0431_debug_aug`). The horizon comparison runs at CP4 integration.
+- Both 50k-step Discovery runs finished on 2026-11-17 (`runs/20261117-0431_debug_noaug`, `runs/20261117-0431_debug_aug`). Rollout horizon comparison (2026-11-17, CP4-A's `eval_rollouts.py`): **augmentation reduces drift.** The aug model is +2.5 dB PSNR at h=20 and h=50, with 22% lower LPIPS at h=200. It costs about 1 dB at h=1, within the CI. Inference `ctx_level` 0, 1, and 2 give the same result for the aug model, so the demo uses 0.
 
 ## Files
 - Modified: `wm/train/trainer.py` (`context_noise`, `_inputs`, `train_step` returns `ctx_level`, `_log_ctx_levels`, config validation, `n_levels` check).
@@ -74,6 +74,36 @@ Commands (macOS arm64, M3, Python 3.13.2, CPU):
   - **Val loss (clean context) is close:** both are in 0.0012-0.0020 over the last 3k steps. The step-to-step variation (noaug 0.0012 → 0.0015, aug 0.0014 → 0.0020) is about as large as the gap, so one-step val loss does not separate the runs. The aug model spends some capacity on noisy contexts, so a slightly higher clean-context loss is expected. The test that matters is the rollout horizon curve.
   - Checked from each `ckpt_last.pt`: `debug_noaug` step 50000, `aug_max` 0.0, shared, seed 0; `debug_aug` step 50000, `aug_max` 0.7, shared, seed 0.
 
+- **Rollout horizon comparison** (Discovery, one L40S, `gpuq`, via `scripts/slurm/eval.sbatch`). `scripts/eval_rollouts.py --config configs/eval/rollouts.yaml --models copy_last <CP3 small> <noaug> <aug> --T 200 --n 64 --set 'ctx_levels=[0,1,2]' --set 'dataset_dirs=[/dartfs-hpc/scratch/f0079km/wm/data/eval]'`. Rollouts start at frame 32, EMA weights, the checkpoint default sampler (Euler, 3 steps), seed 0. Outputs (not committed): `runs/eval_rollouts/cp4_integration/{metrics.json,metrics.csv,horizon.png,videos/}`.
+
+  Mean ± 95% CI over 64 trajectories, `ctx_level = 0`:
+
+  | h | copy-last PSNR | CP3 small PSNR | noaug PSNR | aug PSNR | copy-last LPIPS | CP3 small LPIPS | noaug LPIPS | aug LPIPS |
+  |---:|---:|---:|---:|---:|---:|---:|---:|---:|
+  | 1 | 30.2 | 34.8 | 35.6 ± 1.1 | 34.5 ± 1.5 | 0.007 | 0.004 | 0.003 ± 0.002 | 0.005 ± 0.002 |
+  | 5 | 22.9 | 27.1 | 31.3 | 30.0 | 0.027 | 0.014 | 0.007 | 0.011 |
+  | 10 | 20.5 | 24.6 | 27.0 | 27.2 | 0.034 | 0.020 | 0.015 | 0.016 |
+  | 20 | 18.5 | 20.2 | 22.8 ± 0.9 | **25.3 ± 1.2** | 0.058 | 0.045 | 0.031 ± 0.004 | **0.025 ± 0.004** |
+  | 50 | 15.5 | 16.6 | 18.3 ± 0.7 | **20.7 ± 1.0** | 0.084 | 0.078 | 0.062 ± 0.005 | **0.046 ± 0.006** |
+  | 100 | 16.1 | 15.9 | 15.7 | 17.8 | 0.156 | 0.134 | 0.103 | 0.081 |
+  | 200 | 15.8 | 16.4 | 16.7 ± 0.3 | 16.8 ± 0.4 | 0.231 | 0.204 | 0.176 ± 0.009 | **0.137 ± 0.012** |
+
+  - **Augmentation reduces drift.** At h=1 the aug model is ~1 dB lower than noaug, within the CI: that is the cost of spending capacity on noisy contexts. From h≈10 it pulls ahead. At h=20 and h=50 the gap is +2.5 dB, outside both CIs. At h=200 LPIPS is 22% lower. In `horizon.png` the three aug curves sit above everything else from h≈10 to h≈100.
+  - **PSNR saturates at ~16 dB by h≈100 for every model, copy-last included.** From there PSNR mostly measures the static background, so LPIPS is the metric that still separates the models at long horizons.
+  - **SSIM is highest for copy-last up to h≈50.** The background dominates the frame, so a frozen frame scores well. Not used to rank models.
+  - **Inference `ctx_level` sweep, aug model** (PSNR / LPIPS):
+
+    | h | level 0 | level 1 | level 2 |
+    |---:|---|---|---|
+    | 1 | 34.5 / 0.005 | 34.5 / 0.006 | 34.6 / 0.005 |
+    | 20 | 25.3 / 0.025 | 25.1 / 0.026 | 24.7 / 0.028 |
+    | 50 | 20.7 / 0.046 | 21.0 / 0.045 | 20.4 / 0.048 |
+    | 200 | 16.8 / 0.137 | 17.1 / 0.135 | 16.7 / 0.142 |
+
+    All within the CIs (±1–1.5 dB, ±0.006–0.013 LPIPS). `predict_next` only passes the level to the net and adds no noise, so the model is told its context is slightly noisy and barely changes. **Pick for the demo and later evals: `ctx_level = 0`** (the default).
+  - **noaug and CP3 at `ctx_level` 1 and 2 collapse** (noaug level 2: 25.0 dB at h=1, LPIPS 0.64 at h=200). Expected and not a flaw: those models only saw level 0 in training, so the embeddings for levels 1–9 are untrained. Never run a non-aug checkpoint with a level above 0.
+  - Videos to compare: `videos/20261117-0431_debug_aug_ckpt_last@ctx0_traj00.mp4` vs `videos/20261117-0431_debug_noaug_ckpt_last@ctx0_traj00.mp4` (also traj21, traj42, traj63).
+
 ## Training on Discovery (for Syed)
 Both runs start fresh from step 0 with `seed: 0` on the same data. Don't reuse `runs/20261105-0558_debug_small`.
 The CP3 small run did ~292 samples/s, so 50k × 64 ≈ 3 h per run. The two runs are independent and can run at the same time.
@@ -120,7 +150,8 @@ None.
 ## Follow-ups
 - Optional: compare the two `step_0050000.png` grids and the aug run's `loss_by_ctx_level/*` curves.
 - Record the `gpuq` limits for ROADMAP 1.4: 5-day time limit; GPUs `nvidia_l40s` (8 per node) and `nvidia_a100_80gb_pcie_3g.40gb` MIG slices (4).
-- Integration (CP4-A's `eval_rollouts.py`): horizon curves for `debug_noaug` vs `debug_aug` at inference `ctx_level` ∈ {0, 1, 2}, plus copy-last.
-- CP6-B: the demo spec doesn't mention `ctx_level`, so it would use `predict_next`'s default of 0. Pass the level CP4 integration picks (from the demo config), and optionally add a key to change it live.
+- Integration: use `debug_aug` (`aug_max` 0.7, shared) as the training default from CP5 on. ROADMAP's CP4 result is "context noise reduces drift; inference `ctx_level` 0".
+- Optional: sweep inference `ctx_level` higher (3–5) on the aug model. 0–2 show no difference, so a larger level could help long rollouts or could hurt the first steps.
+- CP6-B: the demo spec doesn't mention `ctx_level`, so it would use `predict_next`'s default of 0. CP4 picked `ctx_level = 0`, so the default is right. Keep it in the demo config, and optionally add a key to change it live.
 - Still open from CP3: the HDF5 worker close hook in `wm/data/dataset.py` (out of scope here).
 - CP6-C ablation: `per_frame` mode is implemented and tested, but no run uses it yet.
