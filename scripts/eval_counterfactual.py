@@ -3,10 +3,12 @@
     python scripts/eval_counterfactual.py --config configs/eval/counterfactual.yaml \
         --models copy_last runs/<run>/checkpoints/ckpt_last.pt --set idm=runs/idm/idm.pt
 
-Each of n eval episodes gets one branch row t (player visible, no player laser in flight). From
+Each of n eval episodes gets one branch row t (player visible and off the walls, no player laser
+in flight). From
 there the real emulator (exact replay, then clone/restore) and every model run each program in
 `wm.eval.counterfactual.PROGRAMS` for `horizon` steps. Reported per source (real and each model):
-- ordering accuracy x_LEFT + m < x_NOOP < x_RIGHT - m at the last step, and mean dx per step;
+- ordering accuracy x_LEFT + m < x_NOOP < x_RIGHT - m at the last step (for models also on the
+  branches where the real game is ordered: deaths and respawns cap the real value), mean dx per step;
 - fire response: P(laser in the launch zone within `fire_window` steps), pooled over the three
   fire programs, and the same for the three no-fire programs (detector false positives);
 - with `idm`, inverse dynamics accuracy on every consecutive frame pair, labelled by the program.
@@ -72,15 +74,22 @@ def idm_accuracy(model: IDM, frames: np.ndarray, programs: list[int], device: to
     return {"move": hits["move"] / pairs, "fire": hits["fire"] / pairs, "n": pairs}
 
 
-def score(frames: np.ndarray, idle: np.ndarray, cfg: dict) -> tuple[dict, np.ndarray]:
-    """Controllability metrics of frames (B,P,T+1,H,W,3), and the detected player x (B,P,T+1)."""
+def score(frames: np.ndarray, idle: np.ndarray, cfg: dict, real_ordered: np.ndarray | None = None) -> tuple[dict, np.ndarray]:
+    """Controllability metrics of frames (B,P,T+1,H,W,3), and the detected player x (B,P,T+1).
+
+    `real_ordered` (B,) adds the ordering accuracy on the branches where the real game is ordered.
+    """
     flat = frames.reshape(-1, *frames.shape[3:])
     x = detectors.player_x(flat).reshape(frames.shape[:3])
     laser = detectors.laser_present(flat).reshape(frames.shape[:3])
     window = int(cfg["fire_window"])
     fire_p, fire_n = cf.fire_response(laser, idle, FIRE_PROGRAMS, window)
     ctrl_p, ctrl_n = cf.fire_response(laser, idle, NO_FIRE_PROGRAMS, window)
-    return {"ordering_accuracy": cf.ordering_accuracy(x, float(cfg["margin_px"])),
+    ordered = cf.ordered(x, float(cfg["margin_px"]))
+    extra = {} if real_ordered is None else {
+        "ordering_accuracy_real_ordered": float(ordered[real_ordered].mean()) if real_ordered.any() else float("nan"),
+        "n_real_ordered": int(real_ordered.sum())}
+    return {"ordering_accuracy": float(ordered.mean()), **extra,
             "dx_per_step": cf.mean_dx(x),
             "fire_response": {"p": fire_p, "n": fire_n},
             "no_fire_response": {"p": ctrl_p, "n": ctrl_n},
@@ -141,6 +150,7 @@ def main(argv: list[str] | None = None) -> Path:
     real_runs = [cf.real_branches(b, programs, horizon) for b in branches]
     real = np.stack([r[0] for r in real_runs])
     metrics, x_real = score(real, idle, cfg)
+    real_ordered = cf.ordered(x_real, float(cfg["margin_px"]))
     results = {"real": {**metrics, "ended": int(sum(r[1].sum() for r in real_runs)), "seconds": time.perf_counter() - start}}
     if idm is not None:
         results["real"]["idm"] = idm_accuracy(idm, real, programs, device)
@@ -152,7 +162,7 @@ def main(argv: list[str] | None = None) -> Path:
         gen = cf.model_branches(model, branches, programs, horizon, int(cfg["batch_size"]), device=device,
                                 num_steps=cfg["num_steps"], cfg_scale=cfg["cfg_scale"], ctx_level=level,
                                 generator=generator)
-        metrics, x = score(gen, idle, cfg)
+        metrics, x = score(gen, idle, cfg, real_ordered)
         with np.errstate(invalid="ignore"):
             err = np.abs(x[:, :, -1] - x_real[:, :, -1])
         metrics["final_x_error_px"] = {p: float(np.nanmean(err[:, i])) if np.isfinite(err[:, i]).any() else float("nan")
@@ -165,7 +175,9 @@ def main(argv: list[str] | None = None) -> Path:
 
     for tag, r in results.items():
         idm_text = f", IDM move {r['idm']['move']:.3f} fire {r['idm']['fire']:.3f}" if "idm" in r else ""
-        print(f"{tag} ({r['seconds']:.0f} s): ordering {r['ordering_accuracy']:.3f}, dx/step LEFT "
+        cond = (f" ({r['ordering_accuracy_real_ordered']:.3f} on the {r['n_real_ordered']} real-ordered)"
+                if "n_real_ordered" in r else "")
+        print(f"{tag} ({r['seconds']:.0f} s): ordering {r['ordering_accuracy']:.3f}{cond}, dx/step LEFT "
               f"{r['dx_per_step']['LEFT']:+.3f} NOOP {r['dx_per_step']['NOOP']:+.3f} RIGHT {r['dx_per_step']['RIGHT']:+.3f}, "
               f"fire {r['fire_response']['p']:.3f} (no-fire {r['no_fire_response']['p']:.3f}, n={r['fire_response']['n']})"
               + idm_text)

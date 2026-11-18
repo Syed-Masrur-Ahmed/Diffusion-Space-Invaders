@@ -13,6 +13,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
+from wm.data import ram as ram_map
 from wm.data.reader import ShardReader, list_shards
 from wm.data.schema import ACTION_MEANINGS
 from wm.env import MaxPoolSkip, make_env, to_model_frame
@@ -25,6 +26,10 @@ PROGRAMS = ("NOOP", "LEFT", "RIGHT", "FIRE", "LEFTFIRE", "RIGHTFIRE")  # constan
 # by 4 per agent step from ~85. Used only to choose which branches test the fire response.
 PLAYER_LASER_Y = 85
 LASER_IDLE = 246
+# RAM player x (wm.data.ram.PLAYER_X) runs from 35 at the left wall to 117 at the right (CP2-A, CP5-A);
+# 8 units is ~4 px at 84, so from a ready row both LEFT and RIGHT can move the player > 2 px from NOOP.
+PLAYER_RAM_X_RANGE = (35, 117)
+WALL_CLEARANCE = 8
 
 
 @dataclass
@@ -53,8 +58,8 @@ def pick_branches(dataset_dirs: list[str | Path], n: int, K: int, horizon: int, 
     """One branch in each of n episodes spread evenly over the eligible ones, t drawn with `seed`.
 
     t is uniform over rows with t >= max(K, min_step) and t + horizon <= the episode's last row.
-    With `require_ready`, row t must also show the player and have no player laser in flight, so
-    every branch can test both movement and the fire response.
+    With `require_ready`, row t must also show the player, away from both walls, with no player
+    laser in flight, so every branch can test movement in both directions and the fire response.
     """
     eligible = []
     for path in sorted(p for d in dataset_dirs for p in list_shards(d)):
@@ -72,13 +77,16 @@ def pick_branches(dataset_dirs: list[str | Path], n: int, K: int, horizon: int, 
         reader = ShardReader(path)
         start, length = int(reader.episodes["start"][e]), int(reader.episodes["length"][e])
         rows = np.arange(max(K, min_step), length - horizon)
-        idle = reader.read("ram", slice(start, start + length))[rows, PLAYER_LASER_Y] == LASER_IDLE
-        for t in rng.permutation(rows[idle] if require_ready else rows):
+        ram = reader.read("ram", slice(start, start + length))[rows]
+        x = ram[:, ram_map.PLAYER_X].astype(np.int64)
+        ready = ((ram[:, PLAYER_LASER_Y] == LASER_IDLE) & (x >= PLAYER_RAM_X_RANGE[0] + WALL_CLEARANCE)
+                 & (x <= PLAYER_RAM_X_RANGE[1] - WALL_CLEARANCE))
+        for t in rng.permutation(rows[ready] if require_ready else rows):
             frames = reader.read("frames", slice(start + t - K + 1, start + t + 1))
             if not require_ready or not np.isnan(detectors.player_x(frames[-1:]))[0]:
                 break
         else:
-            raise ValueError(f"{path} episode {e}: no eligible row shows the player with no laser in flight")
+            raise ValueError(f"{path} episode {e}: no eligible row is ready (player visible, off the walls, no laser)")
         ram = reader.read("ram", slice(start + t, start + t + 1))[0]
         branches.append(Branch(
             str(path), e, int(t), int(reader.episodes["seed"][e]), int(reader.episodes["noops"][e]), frames,
@@ -154,11 +162,11 @@ def _idx(name: str) -> int:
     return PROGRAMS.index(name)
 
 
-def ordering_accuracy(x: np.ndarray, margin: float) -> float:
-    """Fraction of branches with x_LEFT + margin < x_NOOP < x_RIGHT - margin at the last step; x is (B, P, T+1)."""
+def ordered(x: np.ndarray, margin: float) -> np.ndarray:
+    """(B,) bool: x_LEFT + margin < x_NOOP < x_RIGHT - margin at the last step; x is (B, P, T+1)."""
     left, noop, right = (x[:, _idx(p), -1] for p in ("LEFT", "NOOP", "RIGHT"))
     with np.errstate(invalid="ignore"):  # a missing player (NaN) counts as a failure
-        return float(np.mean((left + margin < noop) & (noop + margin < right)))
+        return (left + margin < noop) & (noop + margin < right)
 
 
 def mean_dx(x: np.ndarray) -> dict[str, float]:

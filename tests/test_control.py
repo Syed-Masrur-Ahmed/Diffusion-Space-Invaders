@@ -219,8 +219,8 @@ def test_ordering_accuracy_with_margin():
     x[2, L, -1], x[2, N, -1] = 30, np.nan       # player not found under NOOP
     x[3, L, -1], x[3, R, -1] = 30, 50
     x[3, L, -2] = 0                              # only the last step counts
-    assert cf.ordering_accuracy(x, margin=2.0) == 0.5
-    assert cf.ordering_accuracy(np.full((3, len(PROGRAMS), 2), 40.0), 2.0) == 0.0  # copy-last
+    np.testing.assert_array_equal(cf.ordered(x, margin=2.0), [True, False, False, True])
+    assert not cf.ordered(np.full((3, len(PROGRAMS), 2), 40.0), 2.0).any()  # copy-last
 
 
 def test_mean_dx_ignores_missing_steps():
@@ -251,7 +251,9 @@ REAL_STEPS = 70  # past the ~32-step start-up phase, so the player responds to i
 
 
 def collect_real(out_dir, n_episodes: int = 2, steps: int = REAL_STEPS):
-    """A tiny real shard: seeded episodes of random actions, written like scripts/collect.py does."""
+    """A tiny real shard written like scripts/collect.py does: seeded episodes that move right for 50
+    steps (input is ignored for the first ~32), then take random non-fire actions, so rows 40+ have the
+    player off the walls with no laser in flight."""
     rng = np.random.default_rng(0)
     attrs = {"env_id": "ALE/SpaceInvaders-v5", "frameskip": 4, "maxpool": True, "resolution": 84,
              "resize_method": "max", "collector_config": {"fixture": "test_control"}}
@@ -262,8 +264,8 @@ def collect_real(out_dir, n_episodes: int = 2, steps: int = REAL_STEPS):
             ale = env.unwrapped.ale
             w.begin_episode(to_model_frame(obs, 84, "max"), ale.getRAM(), info["lives"], info["seed"],
                             info["noops"], SOURCE_RANDOM, -1.0)
-            for _ in range(steps):
-                a = int(rng.integers(NUM_ACTIONS))
+            for step in range(steps):
+                a = ACTION_MEANINGS.index("RIGHT") if step < 50 else int(rng.choice([0, 2, 3]))
                 obs, reward, _, _, info = env.step(a)
                 w.add_step(a, reward, to_model_frame(obs, 84, "max"), ale.getRAM(), info["lives"])
             w.end_episode(END_TRUNCATED, terminated=False)
@@ -290,6 +292,8 @@ def test_real_branches_match_a_fresh_replay(real_dir):
             obs, *_ = env.step(PROGRAMS[p])
             np.testing.assert_array_equal(frames[p, s], to_model_frame(obs, 84, "max"), err_msg=f"program {p} step {s}")
     assert branch.laser_idle and not np.isnan(detectors.player_x(branch.frames[-1:]))[0]
+    ram_x = ShardReader(branch.shard).read("ram", slice(branch.t, branch.t + 1))[0, 28]  # episode 0 starts at row 0
+    assert cf.PLAYER_RAM_X_RANGE[0] + cf.WALL_CLEARANCE <= ram_x <= cf.PLAYER_RAM_X_RANGE[1] - cf.WALL_CLEARANCE
     x = detectors.player_x(frames[:, -1])
     assert x[cf.PROGRAMS.index("LEFT")] < x[cf.PROGRAMS.index("NOOP")] < x[cf.PROGRAMS.index("RIGHT")]
 
@@ -345,6 +349,7 @@ def test_eval_counterfactual_end_to_end(real_dir, tmp_path):
     assert len(result["branches"]) == 2 and all(b["laser_idle"] and b["t"] >= 40 for b in result["branches"])
     copy_last, real = result["results"]["copy_last"], result["results"]["real"]
     assert copy_last["ordering_accuracy"] == 0.0  # the roadmap's expected copy-last result
+    assert real["ordering_accuracy"] == 1.0 and copy_last["ordering_accuracy_real_ordered"] == 0.0
     assert all(v == 0 for v in copy_last["dx_per_step"].values())
     assert real["dx_per_step"]["LEFT"] < 0 < real["dx_per_step"]["RIGHT"]
     assert real["idm"]["n"] == copy_last["idm"]["n"] == 2 * len(cf.PROGRAMS) * 6
