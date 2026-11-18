@@ -1,0 +1,1062 @@
+{
+  "steps": 5000000,
+  "episodes": 6355,
+  "rows": 5006355,
+  "jobs": {
+    "agent_eps0.05": {
+      "steps": 1000000,
+      "episodes": 986,
+      "mean_return": 725.6085192697768,
+      "terminated": 970,
+      "truncated": 16
+    },
+    "agent_eps0.2": {
+      "steps": 2000000,
+      "episodes": 2261,
+      "mean_return": 516.6430782839451,
+      "terminated": 2245,
+      "truncated": 16
+    },
+    "agent_eps0.3": {
+      "steps": 1000000,
+      "episodes": 1285,
+      "mean_return": 403.94941634241246,
+      "terminated": 1269,
+      "truncated": 16
+    },
+    "random": {
+      "steps": 1000000,
+      "episodes": 1823,
+      "mean_return": 150.13987931980253,
+      "terminated": 1807,
+      "truncated": 16
+    }
+  },
+  "part_seconds": 13086.100146574434,
+  "parts": [
+    {
+      "job": 0,
+      "worker": 0,
+      "writer": 0,
+      "budget": 62500,
+      "job_name": "agent_eps0.05",
+      "steps": 62500,
+      "episodes": 62,
+      "rows": 62562,
+      "mean_return": 728.6290322580645,
+      "end_reasons": {
+        "terminated": 61,
+        "truncated": 1
+      },
+      "seconds": 199.58688508393243
+    },
+    {
+      "job": 0,
+      "worker": 1,
+      "writer": 1,
+      "budget": 62500,
+      "job_name": "agent_eps0.05",
+      "steps": 62500,
+      "episodes": 64,
+      "rows": 62564,
+      "mean_return": 707.890625,
+      "end_reasons": {
+        "terminated": 63,
+        "truncated": 1
+      },
+      "seconds": 204.73815168789588
+    },
+    {
+      "job": 0,
+      "worker": 2,
+      "writer": 2,
+      "budget": 62500,
+      "job_name": "agent_eps0.05",
+      "steps": 62500,
+      "episodes": 61,
+      "rows": 62561,
+      "mean_return": 745.7377049180328,
+      "end_reasons": {
+        "terminated": 60,
+        "truncated": 1
+      },
+      "seconds": 202.68302876502275
+    },
+    {
+      "job": 0,
+      "worker": 3,
+      "writer": 3,
+      "budget": 62500,
+      "job_name": "agent_eps0.05",
+      "steps": 62500,
+      "episodes": 60,
+      "rows": 62560,
+      "mean_return": 742.75,
+      "end_reasons": {
+        "terminated": 59,
+        "truncated": 1
+      },
+      "seconds": 202.82913047797047
+    },
+    {
+      "job": 0,
+      "worker": 4,
+      "writer": 4,
+      "budget": 62500,
+      "job_name": "agent_eps0.05",
+      "steps": 62500,
+      "episodes": 61,
+      "rows": 62561,
+      "mean_return": 706.5573770491803,
+      "end_reasons": {
+        "terminated": 60,
+        "truncated": 1
+      },
+      "seconds": 202.46875168499537
+    },
+    {
+      "job": 0,
+      "worker": 5,
+      "writer": 5,
+      "budget": 62500,
+      "job_name": "agent_eps0.05",
+      "steps": 62500,
+      "episodes": 59,
+      "rows": 62559,
+      "mean_return": 771.271186440678,
+      "end_reasons": {
+        "terminated": 58,
+        "truncated": 1
+      },
+      "seconds": 197.27952374890447
+    },
+    {
+      "job": 0,
+      "worker": 6,
+      "writer": 6,
+      "budget": 62500,
+      "job_name": "agent_eps0.05",
+      "steps": 62500,
+      "episodes": 62,
+      "rows": 62562,
+      "mean_return": 745.3225806451613,
+      "end_reasons": {
+        "terminated": 61,
+        "truncated": 1
+      },
+      "seconds": 205.17304790997878
+    },
+    {
+      "job": 0,
+      "worker": 7,
+      "writer": 7,
+      "budget": 62500,
+      "job_name": "agent_eps0.05",
+      "steps": 62500,
+      "episodes": 61,
+      "rows": 62561,
+      "mean_return": 731.5573770491803,
+      "end_reasons": {
+        "terminated": 60,
+        "truncated": 1
+      },
+      "seconds": 177.8517690191511
+    },
+    {
+      "job": 0,
+      "worker": 8,
+      "writer": 8,
+      "budget": 62500,
+      "job_name": "agent_eps0.05",
+      "steps": 62500,
+      "episodes": 62,
+      "rows": 62562,
+      "mean_return": 717.0967741935484,
+      "end_reasons": {
+        "terminated": 61,
+        "truncated": 1
+      },
+      "seconds": 202.44560690689832
+    },
+    {
+      "job": 0,
+      "worker": 9,
+      "writer": 9,
+      "budget": 62500,
+      "job_name": "agent_eps0.05",
+      "steps": 62500,
+      "episodes": 62,
+      "rows": 62562,
+      "mean_return": 688.6290322580645,
+      "end_reasons": {
+        "terminated": 61,
+        "truncated": 1
+      },
+      "seconds": 200.07204785197973
+    },
+    {
+      "job": 0,
+      "worker": 10,
+      "writer": 10,
+      "budget": 62500,
+      "job_name": "agent_eps0.05",
+      "steps": 62500,
+      "episodes": 64,
+      "rows": 62564,
+      "mean_return": 707.8125,
+      "end_reasons": {
+        "terminated": 63,
+        "truncated": 1
+      },
+      "seconds": 197.53489125706255
+    },
+    {
+      "job": 0,
+      "worker": 11,
+      "writer": 11,
+      "budget": 62500,
+      "job_name": "agent_eps0.05",
+      "steps": 62500,
+      "episodes": 63,
+      "rows": 62563,
+      "mean_return": 722.6984126984127,
+      "end_reasons": {
+        "terminated": 62,
+        "truncated": 1
+      },
+      "seconds": 201.7187116870191
+    },
+    {
+      "job": 0,
+      "worker": 12,
+      "writer": 12,
+      "budget": 62500,
+      "job_name": "agent_eps0.05",
+      "steps": 62500,
+      "episodes": 62,
+      "rows": 62562,
+      "mean_return": 714.5967741935484,
+      "end_reasons": {
+        "terminated": 61,
+        "truncated": 1
+      },
+      "seconds": 195.62767398101278
+    },
+    {
+      "job": 0,
+      "worker": 13,
+      "writer": 13,
+      "budget": 62500,
+      "job_name": "agent_eps0.05",
+      "steps": 62500,
+      "episodes": 63,
+      "rows": 62563,
+      "mean_return": 683.4920634920635,
+      "end_reasons": {
+        "terminated": 62,
+        "truncated": 1
+      },
+      "seconds": 203.73564099683426
+    },
+    {
+      "job": 0,
+      "worker": 14,
+      "writer": 14,
+      "budget": 62500,
+      "job_name": "agent_eps0.05",
+      "steps": 62500,
+      "episodes": 59,
+      "rows": 62559,
+      "mean_return": 764.3220338983051,
+      "end_reasons": {
+        "terminated": 58,
+        "truncated": 1
+      },
+      "seconds": 198.76750131696463
+    },
+    {
+      "job": 0,
+      "worker": 15,
+      "writer": 15,
+      "budget": 62500,
+      "job_name": "agent_eps0.05",
+      "steps": 62500,
+      "episodes": 61,
+      "rows": 62561,
+      "mean_return": 738.1967213114754,
+      "end_reasons": {
+        "terminated": 60,
+        "truncated": 1
+      },
+      "seconds": 197.33218254800886
+    },
+    {
+      "job": 1,
+      "worker": 0,
+      "writer": 16,
+      "budget": 125000,
+      "job_name": "agent_eps0.2",
+      "steps": 125000,
+      "episodes": 137,
+      "rows": 125137,
+      "mean_return": 541.8613138686131,
+      "end_reasons": {
+        "terminated": 136,
+        "truncated": 1
+      },
+      "seconds": 298.94613538705744
+    },
+    {
+      "job": 1,
+      "worker": 1,
+      "writer": 17,
+      "budget": 125000,
+      "job_name": "agent_eps0.2",
+      "steps": 125000,
+      "episodes": 142,
+      "rows": 125142,
+      "mean_return": 512.5352112676056,
+      "end_reasons": {
+        "terminated": 141,
+        "truncated": 1
+      },
+      "seconds": 336.031918002991
+    },
+    {
+      "job": 1,
+      "worker": 2,
+      "writer": 18,
+      "budget": 125000,
+      "job_name": "agent_eps0.2",
+      "steps": 125000,
+      "episodes": 139,
+      "rows": 125139,
+      "mean_return": 513.7769784172662,
+      "end_reasons": {
+        "terminated": 138,
+        "truncated": 1
+      },
+      "seconds": 341.50073003419675
+    },
+    {
+      "job": 1,
+      "worker": 3,
+      "writer": 19,
+      "budget": 125000,
+      "job_name": "agent_eps0.2",
+      "steps": 125000,
+      "episodes": 138,
+      "rows": 125138,
+      "mean_return": 535.9782608695652,
+      "end_reasons": {
+        "terminated": 137,
+        "truncated": 1
+      },
+      "seconds": 349.7425491739996
+    },
+    {
+      "job": 1,
+      "worker": 4,
+      "writer": 20,
+      "budget": 125000,
+      "job_name": "agent_eps0.2",
+      "steps": 125000,
+      "episodes": 144,
+      "rows": 125144,
+      "mean_return": 494.4791666666667,
+      "end_reasons": {
+        "terminated": 143,
+        "truncated": 1
+      },
+      "seconds": 345.9084068890661
+    },
+    {
+      "job": 1,
+      "worker": 5,
+      "writer": 21,
+      "budget": 125000,
+      "job_name": "agent_eps0.2",
+      "steps": 125000,
+      "episodes": 141,
+      "rows": 125141,
+      "mean_return": 513.3687943262412,
+      "end_reasons": {
+        "terminated": 140,
+        "truncated": 1
+      },
+      "seconds": 343.56603087089024
+    },
+    {
+      "job": 1,
+      "worker": 6,
+      "writer": 22,
+      "budget": 125000,
+      "job_name": "agent_eps0.2",
+      "steps": 125000,
+      "episodes": 147,
+      "rows": 125147,
+      "mean_return": 499.96598639455783,
+      "end_reasons": {
+        "terminated": 146,
+        "truncated": 1
+      },
+      "seconds": 350.96736860391684
+    },
+    {
+      "job": 1,
+      "worker": 7,
+      "writer": 23,
+      "budget": 125000,
+      "job_name": "agent_eps0.2",
+      "steps": 125000,
+      "episodes": 146,
+      "rows": 125146,
+      "mean_return": 493.2191780821918,
+      "end_reasons": {
+        "terminated": 145,
+        "truncated": 1
+      },
+      "seconds": 355.8214013141114
+    },
+    {
+      "job": 1,
+      "worker": 8,
+      "writer": 24,
+      "budget": 125000,
+      "job_name": "agent_eps0.2",
+      "steps": 125000,
+      "episodes": 136,
+      "rows": 125136,
+      "mean_return": 536.3970588235294,
+      "end_reasons": {
+        "terminated": 135,
+        "truncated": 1
+      },
+      "seconds": 346.6944367950782
+    },
+    {
+      "job": 1,
+      "worker": 9,
+      "writer": 25,
+      "budget": 125000,
+      "job_name": "agent_eps0.2",
+      "steps": 125000,
+      "episodes": 143,
+      "rows": 125143,
+      "mean_return": 505.034965034965,
+      "end_reasons": {
+        "terminated": 142,
+        "truncated": 1
+      },
+      "seconds": 356.68381673516706
+    },
+    {
+      "job": 1,
+      "worker": 10,
+      "writer": 26,
+      "budget": 125000,
+      "job_name": "agent_eps0.2",
+      "steps": 125000,
+      "episodes": 146,
+      "rows": 125146,
+      "mean_return": 494.6917808219178,
+      "end_reasons": {
+        "terminated": 145,
+        "truncated": 1
+      },
+      "seconds": 352.4076193999499
+    },
+    {
+      "job": 1,
+      "worker": 11,
+      "writer": 27,
+      "budget": 125000,
+      "job_name": "agent_eps0.2",
+      "steps": 125000,
+      "episodes": 145,
+      "rows": 125145,
+      "mean_return": 499.58620689655174,
+      "end_reasons": {
+        "terminated": 144,
+        "truncated": 1
+      },
+      "seconds": 354.3727630521171
+    },
+    {
+      "job": 1,
+      "worker": 12,
+      "writer": 28,
+      "budget": 125000,
+      "job_name": "agent_eps0.2",
+      "steps": 125000,
+      "episodes": 136,
+      "rows": 125136,
+      "mean_return": 559.4852941176471,
+      "end_reasons": {
+        "terminated": 135,
+        "truncated": 1
+      },
+      "seconds": 353.2316966718063
+    },
+    {
+      "job": 1,
+      "worker": 13,
+      "writer": 29,
+      "budget": 125000,
+      "job_name": "agent_eps0.2",
+      "steps": 125000,
+      "episodes": 139,
+      "rows": 125139,
+      "mean_return": 532.7697841726618,
+      "end_reasons": {
+        "terminated": 138,
+        "truncated": 1
+      },
+      "seconds": 354.46761518879794
+    },
+    {
+      "job": 1,
+      "worker": 14,
+      "writer": 30,
+      "budget": 125000,
+      "job_name": "agent_eps0.2",
+      "steps": 125000,
+      "episodes": 141,
+      "rows": 125141,
+      "mean_return": 517.4468085106383,
+      "end_reasons": {
+        "terminated": 140,
+        "truncated": 1
+      },
+      "seconds": 353.4024961087853
+    },
+    {
+      "job": 1,
+      "worker": 15,
+      "writer": 31,
+      "budget": 125000,
+      "job_name": "agent_eps0.2",
+      "steps": 125000,
+      "episodes": 141,
+      "rows": 125141,
+      "mean_return": 522.6950354609929,
+      "end_reasons": {
+        "terminated": 140,
+        "truncated": 1
+      },
+      "seconds": 361.3249564319849
+    },
+    {
+      "job": 2,
+      "worker": 0,
+      "writer": 32,
+      "budget": 62500,
+      "job_name": "agent_eps0.3",
+      "steps": 62500,
+      "episodes": 80,
+      "rows": 62580,
+      "mean_return": 418.625,
+      "end_reasons": {
+        "terminated": 79,
+        "truncated": 1
+      },
+      "seconds": 152.85439784894697
+    },
+    {
+      "job": 2,
+      "worker": 1,
+      "writer": 33,
+      "budget": 62500,
+      "job_name": "agent_eps0.3",
+      "steps": 62500,
+      "episodes": 78,
+      "rows": 62578,
+      "mean_return": 413.65384615384613,
+      "end_reasons": {
+        "terminated": 77,
+        "truncated": 1
+      },
+      "seconds": 171.40276423911564
+    },
+    {
+      "job": 2,
+      "worker": 2,
+      "writer": 34,
+      "budget": 62500,
+      "job_name": "agent_eps0.3",
+      "steps": 62500,
+      "episodes": 77,
+      "rows": 62577,
+      "mean_return": 419.4805194805195,
+      "end_reasons": {
+        "terminated": 76,
+        "truncated": 1
+      },
+      "seconds": 173.97899020300247
+    },
+    {
+      "job": 2,
+      "worker": 3,
+      "writer": 35,
+      "budget": 62500,
+      "job_name": "agent_eps0.3",
+      "steps": 62500,
+      "episodes": 88,
+      "rows": 62588,
+      "mean_return": 367.04545454545456,
+      "end_reasons": {
+        "terminated": 87,
+        "truncated": 1
+      },
+      "seconds": 181.29878870211542
+    },
+    {
+      "job": 2,
+      "worker": 4,
+      "writer": 36,
+      "budget": 62500,
+      "job_name": "agent_eps0.3",
+      "steps": 62500,
+      "episodes": 75,
+      "rows": 62575,
+      "mean_return": 445.73333333333335,
+      "end_reasons": {
+        "terminated": 74,
+        "truncated": 1
+      },
+      "seconds": 173.36090077203698
+    },
+    {
+      "job": 2,
+      "worker": 5,
+      "writer": 37,
+      "budget": 62500,
+      "job_name": "agent_eps0.3",
+      "steps": 62500,
+      "episodes": 83,
+      "rows": 62583,
+      "mean_return": 378.49397590361446,
+      "end_reasons": {
+        "terminated": 82,
+        "truncated": 1
+      },
+      "seconds": 182.72957293805666
+    },
+    {
+      "job": 2,
+      "worker": 6,
+      "writer": 38,
+      "budget": 62500,
+      "job_name": "agent_eps0.3",
+      "steps": 62500,
+      "episodes": 81,
+      "rows": 62581,
+      "mean_return": 408.2098765432099,
+      "end_reasons": {
+        "terminated": 80,
+        "truncated": 1
+      },
+      "seconds": 174.58976300805807
+    },
+    {
+      "job": 2,
+      "worker": 7,
+      "writer": 39,
+      "budget": 62500,
+      "job_name": "agent_eps0.3",
+      "steps": 62500,
+      "episodes": 78,
+      "rows": 62578,
+      "mean_return": 408.52564102564105,
+      "end_reasons": {
+        "terminated": 77,
+        "truncated": 1
+      },
+      "seconds": 178.35361939109862
+    },
+    {
+      "job": 2,
+      "worker": 8,
+      "writer": 40,
+      "budget": 62500,
+      "job_name": "agent_eps0.3",
+      "steps": 62500,
+      "episodes": 79,
+      "rows": 62579,
+      "mean_return": 416.1392405063291,
+      "end_reasons": {
+        "terminated": 78,
+        "truncated": 1
+      },
+      "seconds": 172.192723545013
+    },
+    {
+      "job": 2,
+      "worker": 9,
+      "writer": 41,
+      "budget": 62500,
+      "job_name": "agent_eps0.3",
+      "steps": 62500,
+      "episodes": 81,
+      "rows": 62581,
+      "mean_return": 400.55555555555554,
+      "end_reasons": {
+        "terminated": 80,
+        "truncated": 1
+      },
+      "seconds": 179.9183145351708
+    },
+    {
+      "job": 2,
+      "worker": 10,
+      "writer": 42,
+      "budget": 62500,
+      "job_name": "agent_eps0.3",
+      "steps": 62500,
+      "episodes": 80,
+      "rows": 62580,
+      "mean_return": 391.5625,
+      "end_reasons": {
+        "terminated": 79,
+        "truncated": 1
+      },
+      "seconds": 182.51129207690246
+    },
+    {
+      "job": 2,
+      "worker": 11,
+      "writer": 43,
+      "budget": 62500,
+      "job_name": "agent_eps0.3",
+      "steps": 62500,
+      "episodes": 77,
+      "rows": 62577,
+      "mean_return": 454.15584415584414,
+      "end_reasons": {
+        "terminated": 76,
+        "truncated": 1
+      },
+      "seconds": 178.318161373958
+    },
+    {
+      "job": 2,
+      "worker": 12,
+      "writer": 44,
+      "budget": 62500,
+      "job_name": "agent_eps0.3",
+      "steps": 62500,
+      "episodes": 83,
+      "rows": 62583,
+      "mean_return": 356.2048192771084,
+      "end_reasons": {
+        "terminated": 82,
+        "truncated": 1
+      },
+      "seconds": 180.85263438010588
+    },
+    {
+      "job": 2,
+      "worker": 13,
+      "writer": 45,
+      "budget": 62500,
+      "job_name": "agent_eps0.3",
+      "steps": 62500,
+      "episodes": 82,
+      "rows": 62582,
+      "mean_return": 403.1707317073171,
+      "end_reasons": {
+        "terminated": 81,
+        "truncated": 1
+      },
+      "seconds": 181.16815920104273
+    },
+    {
+      "job": 2,
+      "worker": 14,
+      "writer": 46,
+      "budget": 62500,
+      "job_name": "agent_eps0.3",
+      "steps": 62500,
+      "episodes": 80,
+      "rows": 62580,
+      "mean_return": 415.4375,
+      "end_reasons": {
+        "terminated": 79,
+        "truncated": 1
+      },
+      "seconds": 181.9691949619446
+    },
+    {
+      "job": 2,
+      "worker": 15,
+      "writer": 47,
+      "budget": 62500,
+      "job_name": "agent_eps0.3",
+      "steps": 62500,
+      "episodes": 83,
+      "rows": 62583,
+      "mean_return": 379.1566265060241,
+      "end_reasons": {
+        "terminated": 82,
+        "truncated": 1
+      },
+      "seconds": 183.20969852688722
+    },
+    {
+      "job": 3,
+      "worker": 0,
+      "writer": 48,
+      "budget": 62500,
+      "job_name": "random",
+      "steps": 62500,
+      "episodes": 114,
+      "rows": 62614,
+      "mean_return": 149.60526315789474,
+      "end_reasons": {
+        "terminated": 113,
+        "truncated": 1
+      },
+      "seconds": 90.71661641797982
+    },
+    {
+      "job": 3,
+      "worker": 1,
+      "writer": 49,
+      "budget": 62500,
+      "job_name": "random",
+      "steps": 62500,
+      "episodes": 113,
+      "rows": 62613,
+      "mean_return": 151.81415929203538,
+      "end_reasons": {
+        "terminated": 112,
+        "truncated": 1
+      },
+      "seconds": 96.79199945298024
+    },
+    {
+      "job": 3,
+      "worker": 2,
+      "writer": 50,
+      "budget": 62500,
+      "job_name": "random",
+      "steps": 62500,
+      "episodes": 117,
+      "rows": 62617,
+      "mean_return": 157.56410256410257,
+      "end_reasons": {
+        "terminated": 116,
+        "truncated": 1
+      },
+      "seconds": 95.20224911603145
+    },
+    {
+      "job": 3,
+      "worker": 3,
+      "writer": 51,
+      "budget": 62500,
+      "job_name": "random",
+      "steps": 62500,
+      "episodes": 109,
+      "rows": 62609,
+      "mean_return": 170.22935779816513,
+      "end_reasons": {
+        "terminated": 108,
+        "truncated": 1
+      },
+      "seconds": 95.3387954798527
+    },
+    {
+      "job": 3,
+      "worker": 4,
+      "writer": 52,
+      "budget": 62500,
+      "job_name": "random",
+      "steps": 62500,
+      "episodes": 109,
+      "rows": 62609,
+      "mean_return": 159.90825688073394,
+      "end_reasons": {
+        "terminated": 108,
+        "truncated": 1
+      },
+      "seconds": 90.45367230591364
+    },
+    {
+      "job": 3,
+      "worker": 5,
+      "writer": 53,
+      "budget": 62500,
+      "job_name": "random",
+      "steps": 62500,
+      "episodes": 115,
+      "rows": 62615,
+      "mean_return": 159.95652173913044,
+      "end_reasons": {
+        "terminated": 114,
+        "truncated": 1
+      },
+      "seconds": 95.674039588077
+    },
+    {
+      "job": 3,
+      "worker": 6,
+      "writer": 54,
+      "budget": 62500,
+      "job_name": "random",
+      "steps": 62500,
+      "episodes": 114,
+      "rows": 62614,
+      "mean_return": 152.28070175438597,
+      "end_reasons": {
+        "terminated": 113,
+        "truncated": 1
+      },
+      "seconds": 93.12105158693157
+    },
+    {
+      "job": 3,
+      "worker": 7,
+      "writer": 55,
+      "budget": 62500,
+      "job_name": "random",
+      "steps": 62500,
+      "episodes": 113,
+      "rows": 62613,
+      "mean_return": 142.2566371681416,
+      "end_reasons": {
+        "terminated": 112,
+        "truncated": 1
+      },
+      "seconds": 93.85003427090123
+    },
+    {
+      "job": 3,
+      "worker": 8,
+      "writer": 56,
+      "budget": 62500,
+      "job_name": "random",
+      "steps": 62500,
+      "episodes": 118,
+      "rows": 62618,
+      "mean_return": 138.6864406779661,
+      "end_reasons": {
+        "terminated": 117,
+        "truncated": 1
+      },
+      "seconds": 96.42583548789844
+    },
+    {
+      "job": 3,
+      "worker": 9,
+      "writer": 57,
+      "budget": 62500,
+      "job_name": "random",
+      "steps": 62500,
+      "episodes": 113,
+      "rows": 62613,
+      "mean_return": 147.9203539823009,
+      "end_reasons": {
+        "terminated": 112,
+        "truncated": 1
+      },
+      "seconds": 93.5844136159867
+    },
+    {
+      "job": 3,
+      "worker": 10,
+      "writer": 58,
+      "budget": 62500,
+      "job_name": "random",
+      "steps": 62500,
+      "episodes": 117,
+      "rows": 62617,
+      "mean_return": 130.3846153846154,
+      "end_reasons": {
+        "terminated": 116,
+        "truncated": 1
+      },
+      "seconds": 95.21577343996614
+    },
+    {
+      "job": 3,
+      "worker": 11,
+      "writer": 59,
+      "budget": 62500,
+      "job_name": "random",
+      "steps": 62500,
+      "episodes": 111,
+      "rows": 62611,
+      "mean_return": 152.97297297297297,
+      "end_reasons": {
+        "terminated": 110,
+        "truncated": 1
+      },
+      "seconds": 94.71998499613255
+    },
+    {
+      "job": 3,
+      "worker": 12,
+      "writer": 60,
+      "budget": 62500,
+      "job_name": "random",
+      "steps": 62500,
+      "episodes": 118,
+      "rows": 62618,
+      "mean_return": 132.24576271186442,
+      "end_reasons": {
+        "terminated": 117,
+        "truncated": 1
+      },
+      "seconds": 96.66254019993357
+    },
+    {
+      "job": 3,
+      "worker": 13,
+      "writer": 61,
+      "budget": 62500,
+      "job_name": "random",
+      "steps": 62500,
+      "episodes": 113,
+      "rows": 62613,
+      "mean_return": 148.49557522123894,
+      "end_reasons": {
+        "terminated": 112,
+        "truncated": 1
+      },
+      "seconds": 93.51437256881036
+    },
+    {
+      "job": 3,
+      "worker": 14,
+      "writer": 62,
+      "budget": 62500,
+      "job_name": "random",
+      "steps": 62500,
+      "episodes": 115,
+      "rows": 62615,
+      "mean_return": 158.91304347826087,
+      "end_reasons": {
+        "terminated": 114,
+        "truncated": 1
+      },
+      "seconds": 95.85846074484289
+    },
+    {
+      "job": 3,
+      "worker": 15,
+      "writer": 63,
+      "budget": 62500,
+      "job_name": "random",
+      "steps": 62500,
+      "episodes": 114,
+      "rows": 62614,
+      "mean_return": 151.49122807017545,
+      "end_reasons": {
+        "terminated": 113,
+        "truncated": 1
+      },
+      "seconds": 95.34684601519257
+    }
+  ]
+}
