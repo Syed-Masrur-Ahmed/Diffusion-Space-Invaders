@@ -1,0 +1,21 @@
+# Autoregressive rollouts on held-out eval trajectories (ROADMAP 4.11, CP4-A).
+# python scripts/eval_rollouts.py --config configs/eval/rollouts.yaml --models copy_last runs/<run>/checkpoints/ckpt_last.pt
+models: [copy_last]       # copy_last and/or checkpoint paths (--models overrides)
+dataset_dirs: [data/eval]
+n: 64                     # trajectories, one per episode, spread evenly over the episodes (--n overrides)
+start: 32                 # first row used in each episode: skips the game's start-up steps after reset
+T: 200                    # generated frames per trajectory (--T overrides)
+K: 4                      # copy_last only; a checkpoint's own K and C are used otherwise
+grayscale: false          # copy_last only
+ctx_levels: [0]           # inference context-noise levels; each checkpoint is run once per level
+num_steps: null           # sampler steps; null = the checkpoint's default
+cfg_scale: null           # action CFG weight; null = the checkpoint's default
+seed: 0                   # CPU sampler generator, reseeded per model
+batch_size: 16            # trajectories generated at once
+metrics: [psnr, ssim, lpips]
+report_horizons: [1, 2, 5, 10, 20, 50, 100, 200]   # printed table and metrics.json "report"
+n_videos: 4               # trajectories exported as MP4 per model (real | generated | |diff|)
+fps: 15
+video_scale: 4            # nearest upscaling
+video_widen: 1            # extra horizontal stretch, display only (2 gives the game's aspect)
+out_dir: runs/eval_rollouts
