@@ -1,0 +1,29 @@
+# Full training set (ROADMAP CP5-B): 5M agent and random steps, 84/max.
+# python scripts/collect.py --config configs/data/full.yaml --workers 16 --set out_dir=<scratch>/data/full
+# data/debug measured 740 MiB per 500k rows, so 5M rows is ~7.5 GB.
+# Use at most 16 workers: 4 jobs x 16 = 64 writer ids keep seeds below EVAL_SEED_BASE.
+out_dir: data/full
+resolution: 84          # D10
+resize_method: max      # D10
+base_seed: 300000000    # above every debug seed (debug: base 0, < 3e8 for up to 10 workers)
+max_episode_steps: 27000
+total_steps: 5000000    # set exactly one of total_steps / total_episodes
+total_episodes: null
+max_rows: 100000
+jobs:
+  - name: agent_eps0.05 # clears more waves: late-wave and new-wave frames (CP2-A gap, D17)
+    policy: agent
+    epsilon: [0.05, 0.05]
+    fraction: 0.2
+  - name: agent_eps0.2
+    policy: agent       # agent | random
+    epsilon: [0.2, 0.2] # drawn uniformly per episode; ignored for random
+    fraction: 0.4
+  - name: agent_eps0.3
+    policy: agent
+    epsilon: [0.3, 0.3]
+    fraction: 0.2
+  - name: random        # action diversity for controllability (CP5-A)
+    policy: random
+    epsilon: null
+    fraction: 0.2

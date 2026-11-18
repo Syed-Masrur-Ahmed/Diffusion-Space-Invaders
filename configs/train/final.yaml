@@ -1,0 +1,65 @@
+# CP5-B final run: base U-Net, K=4, data/full/ + data/human/, context noise on (D22).
+#   python scripts/train.py --config configs/train/final.yaml --dry-run --set data.root=<scratch>/data
+#   DATA_ROOT=<scratch>/data bash scripts/slurm/final_chain.sh     # chained Discovery jobs
+# data/human/ may be empty or missing; shards are listed per dir.
+name: final
+seed: 0
+
+data:
+  root: data            # dataset dirs are root/<dir>
+  dirs: [full, human]
+  K: 4
+  batch_size: 128
+  num_workers: 8        # lazy HDF5 loader; 4-8 workers give ~4k-6k samples/s
+  grayscale: false
+  val_fraction: 0.05
+  in_memory: false      # data/full is far too big for memory
+
+model:
+  arch: unet            # unet | tiny (tests/fixtures.py::TinyDenoiserNet, for tests and smoke jobs)
+  # "base" U-Net fields (4.7), same as configs/model/base.yaml at 84: 34.35M parameters.
+  ch: [128, 256, 384]   # 84 -> 42 -> 21
+  n_res: 2
+  emb_dim: 256
+  n_levels: 10
+  attn_lowest: false
+  dropout: 0.0
+  tiny_hidden: 16       # only for arch: tiny
+
+edm:                    # copied from configs/train/edm_default.yaml
+  sigma_data: 0.5
+  p_mean: -0.4
+  p_std: 1.2
+  sigma_min: 2.0e-3     # training sigma clamp
+  sigma_max: 20.0
+
+sampler:                # copied from configs/train/edm_default.yaml
+  num_steps: 2         # D11 (CP4)
+  sigma_min: 2.0e-3
+  sigma_max: 5.0
+  rho: 7.0
+  method: euler         # euler | heun
+
+train:
+  steps: 200000        # 25.6M samples at batch 128; adjust once the first job logs throughput
+  lr: 1.0e-4
+  betas: [0.9, 0.999]
+  weight_decay: 1.0e-2
+  warmup_steps: 1000
+  lr_schedule: constant # constant | cosine (decays to 0 at `steps` after warmup)
+  grad_clip: 1.0
+  grad_accum: 1         # batches per optimizer step
+  ema_decay: 0.999      # EMA copies the weights exactly during warmup
+  p_action_drop: 0.1
+  aug_max: 0.7          # context noise augmentation (4.8, D22)
+  ctx_noise_mode: shared  # shared | per_frame
+  compile: false
+  allow_mps: false      # use Apple MPS when no CUDA (local debugging only)
+  runs_dir: runs
+  log_every: 50
+  val_every: 2000
+  val_windows: 2048     # fixed, evenly spaced val windows for the val loss
+  sample_every: 5000
+  n_samples: 8          # val windows in each sample grid
+  save_every: 10000
+  keep_last: 5           # ~0.55 GB each (model, EMA, Adam state)
