@@ -1,10 +1,15 @@
 """CP5-A: pixel detectors, counterfactual metrics, inverse dynamics model, and the eval scripts."""
 
+import importlib.util
+import json
+from pathlib import Path
+
 import numpy as np
 import pytest
 import torch
 
 from tests.fixtures import decode_frame, make_fake_shard
+from tests.test_rollout import _tiny_ckpt
 from wm.controls import ACTION_TO_MOVE_FIRE
 from wm.data.reader import ShardReader
 from wm.data.schema import ACTION_MEANINGS, END_TRUNCATED, EVAL_SEED_BASE, NUM_ACTIONS, SOURCE_RANDOM
@@ -15,6 +20,7 @@ from wm.eval import detectors
 from wm.eval.baselines import CopyLastFrame
 from wm.models import idm
 
+REPO = Path(__file__).resolve().parents[1]
 H = W = 84
 GROUND_RGB = (80, 89, 22)
 
@@ -74,7 +80,7 @@ def test_calibration_recovers_a_linear_ram_map():
     frames = np.stack([scene(player=0.5 * r + 1.0) for r in ram_x] + [scene()])  # last frame: no player
     ram = np.zeros((len(frames), 128), np.uint8)
     ram[:-1, 28] = ram_x
-    cal = detectors.calibrate_player_x(frames, ram)
+    cal = detectors.calibrate_player_x(detectors.player_x(frames), ram)
     assert cal["n"] == len(ram_x)
     assert cal["mae_px"] < 0.5 and abs(cal["slope"] - 0.5) < 0.02
 
@@ -294,3 +300,54 @@ def test_real_branches_refuse_a_branch_the_replay_does_not_reach(real_dir):
     branch.prefix_actions = branch.prefix_actions[:-1]
     with pytest.raises(RuntimeError, match="does not reach"):
         cf.real_branches(branch, PROGRAMS, horizon=2)
+
+
+# --- Scripts -----------------------------------------------------------------------------
+
+
+def _load(name: str):
+    spec = importlib.util.spec_from_file_location(name, REPO / "scripts" / f"{name}.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_train_idm_end_to_end(tmp_path):
+    data = tmp_path / "data"
+    make_fake_shard(data, 6, [20] * 6, 12, 12, encode_rows=False)
+    out = _load("train_idm").main([
+        "--config", str(REPO / "configs" / "train" / "idm.yaml"), "--set", f"dataset_dirs=[{data}]",
+        "--set", "val_fraction=0.5", "--set", "steps=6", "--set", "batch_size=8", "--set", "num_workers=0",
+        "--set", "log_every=3", "--set", "eval_every=3", "--set", "val_batches=1", "--set", "model.ch=[8,16]",
+        "--set", "model.hidden=16", "--set", f"out_dir={tmp_path / 'idm'}"])
+    metrics = json.loads((out / "metrics.json").read_text())
+    val = metrics["val"]
+    assert metrics["steps"] == 6 and val["n"] > 0
+    assert np.sum(val["move"]["confusion"]) == np.sum(val["fire"]["confusion"]) == val["n"]
+    assert 0 <= val["move"]["accuracy"] <= 1 and 0 < val["fire"]["majority"] <= 1
+    model = idm.load_idm(out / "idm.pt")
+    assert model.config["H"] == 12 and torch.load(out / "idm.pt", weights_only=False)["step"] == 6
+
+
+@pytest.mark.env
+def test_eval_counterfactual_end_to_end(real_dir, tmp_path):
+    """copy_last and a tiny checkpoint against the real emulator, with an (untrained) IDM."""
+    (tmp_path / "run" / "checkpoints").mkdir(parents=True)
+    ckpt = _tiny_ckpt(tmp_path / "run" / "checkpoints" / "ckpt_last.pt")
+    idm.save_idm(tmp_path / "idm.pt", idm.IDM(C=3, H=84, W=84, ch=(8,), hidden=8))
+    out = _load("eval_counterfactual").main([
+        "--config", str(REPO / "configs" / "eval" / "counterfactual.yaml"), "--models", "copy_last", str(ckpt),
+        "--n", "2", "--set", f"dataset_dirs=[{real_dir}]", "--set", "horizon=6", "--set", "min_step=40",
+        "--set", "batch_size=5", "--set", f"idm={tmp_path / 'idm.pt'}", "--set", "strip_branches=1",
+        "--set", f"out_dir={tmp_path / 'out'}"])
+    result = json.loads((out / "metrics.json").read_text())
+    assert list(result["results"]) == ["real", "copy_last", "run_ckpt_last@ctx0"]
+    assert len(result["branches"]) == 2 and all(b["laser_idle"] and b["t"] >= 40 for b in result["branches"])
+    copy_last, real = result["results"]["copy_last"], result["results"]["real"]
+    assert copy_last["ordering_accuracy"] == 0.0  # the roadmap's expected copy-last result
+    assert all(v == 0 for v in copy_last["dx_per_step"].values())
+    assert real["dx_per_step"]["LEFT"] < 0 < real["dx_per_step"]["RIGHT"]
+    assert real["idm"]["n"] == copy_last["idm"]["n"] == 2 * len(cf.PROGRAMS) * 6
+    assert set(copy_last["final_x_error_px"]) == set(cf.PROGRAMS)
+    assert result["calibration"]["n"] > 0 and result["calibration"]["mae_px"] < 1.0
+    assert (out / "counterfactual.png").stat().st_size > 0

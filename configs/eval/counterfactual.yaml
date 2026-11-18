@@ -1,0 +1,23 @@
+# Counterfactual action programs vs the real emulator (ROADMAP CP5-A).
+#   python scripts/eval_counterfactual.py --config configs/eval/counterfactual.yaml \
+#       --models copy_last runs/<run>/checkpoints/ckpt_last.pt --set idm=runs/idm/idm.pt
+models: [copy_last]       # copy_last and/or checkpoint paths (--models overrides)
+dataset_dirs: [data/eval]
+n: 64                     # branches, one per episode, spread evenly over the episodes (--n overrides)
+horizon: 30               # steps of each constant action program
+min_step: 32              # branch rows start after the game's start-up steps, where input is ignored
+branch_seed: 0            # draws the branch row in each episode
+margin_px: 2.0            # ordering accuracy: x_LEFT + margin < x_NOOP < x_RIGHT - margin at the last step
+fire_window: 3            # fire response: a laser in the launch zone within this many steps
+K: 4                      # copy_last only; a checkpoint's own K is used otherwise
+grayscale: false          # copy_last only; the detectors need RGB
+ctx_levels: [0]           # inference context-noise levels; each checkpoint is run once per level
+num_steps: null           # sampler steps; null = the checkpoint's default
+cfg_scale: null           # action CFG weight w; null = the checkpoint's default
+seed: 0                   # CPU sampler generator, reseeded per model
+batch_size: 32            # (branch, program) rollouts generated at once
+idm: null                 # inverse dynamics checkpoint (scripts/train_idm.py); null skips the IDM metrics
+calibrate: true           # fit player_x against RAM player x on every frame of dataset_dirs
+strip_branches: 3         # branches shown in counterfactual.png
+strip_steps: [0, 5, 10, 20, 30]
+out_dir: runs/eval_counterfactual
