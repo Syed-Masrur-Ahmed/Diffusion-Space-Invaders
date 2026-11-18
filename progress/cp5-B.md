@@ -4,7 +4,8 @@
 - `configs/data/full.yaml`: 5M steps at 84/max, four jobs: agent ε=0.05 (20%, new, for late-wave and new-wave frames), agent ε=0.2 (40%), agent ε=0.3 (20%), random (20%). `base_seed` 3e8, so no episode repeats a debug seed. Expected size ~7.5 GB.
 - `configs/train/final.yaml`: `base` U-Net (34,352,387 parameters), K=4, `data.dirs: [full, human]`, batch 128, 200k steps, `aug_max` 0.7 shared (D22), action dropout 0.1, sampler Euler N=2 (D11), checkpoints every 10k (keep 5). Otherwise identical to `debug.yaml`.
 - `scripts/slurm/final_chain.sh`: submits N chained `train.sbatch` jobs (`afterany`, each auto-resumes). `DRY_RUN=1` prints the commands.
-- **Not started yet:** collection, validation, coverage report, and the training run all need Discovery (Syed). Commands below.
+- **`data/full/` collected and validated on Discovery (2026-11-18):** 5,000,000 steps, 6,355 episodes, 7.0 GiB, all five coverage targets met (wave transitions 488 vs 24 in debug). See Results.
+- Training run: not launched yet. Commands below.
 
 ## Files
 Created: `configs/data/full.yaml`, `configs/train/final.yaml`, `scripts/slurm/final_chain.sh`, `tests/test_fullrun.py`, `progress/cp5-B.md`.
@@ -23,7 +24,33 @@ Commands (macOS arm64, M3, Python 3.13.2, CPU):
 - Dry run: `python scripts/train.py --config configs/train/final.yaml --dry-run --set 'data.dirs=[debug,human]' --set data.batch_size=8 --set train.val_windows=64` → `UNet: 34,352,387 parameters`, `dry run: 5 steps, last loss 2.4916, val loss 2.4227, samples (8, 3, 84, 84)` in 90 s. `data/human/` does not exist on this machine, so this also shows a missing human dir is fine (shards are listed per dir; `data/debug` stands in for `data/full`).
 
 ## Results
-None yet (see Discovery commands).
+**`data/full/`** (Discovery, `/dartfs-hpc/scratch/f0079km/wm/data/full`, partition `standard`, 16 CPU workers, ~14 min: 13,086 worker-seconds / 16). Smoke test first: 2,000 steps on a login node, validator OK.
+
+| job | steps | episodes | mean score | game over | cut by budget |
+|---|---:|---:|---:|---:|---:|
+| agent ε=0.05 | 1,000,000 | 986 | 725.6 | 970 | 16 |
+| agent ε=0.2 | 2,000,000 | 2,261 | 516.6 | 2,245 | 16 |
+| agent ε=0.3 | 1,000,000 | 1,285 | 403.9 | 1,269 | 16 |
+| random | 1,000,000 | 1,823 | 150.1 | 1,807 | 16 |
+| **total** | **5,000,000** | **6,355** | 421.1 | 6,291 | 64 |
+
+- `validate_data.py`: `OK: all invariants hold`. 5,006,355 rows (agent 4,004,532, random 1,001,823, human 0), 80 shards, mean episode 787.8 rows, **7,162 MiB**, compression 14.11 (~1.43 GiB per million rows). Actions: NOOP 11.5%, FIRE 14.8%, RIGHT 13.6%, LEFT 14.5%, RIGHTFIRE 26.4%, LEFTFIRE 19.2%.
+- "Cut by budget" is one episode per worker part, truncated when its step budget ran out (`end_reason` truncated); still valid data.
+- **Coverage** (`coverage_report.py ... --out-dir runs/coverage_full`, not committed):
+
+  | target | minimum | `data/debug` (500k) | `data/full` (5M) |
+  |---|---|---:|---:|
+  | frames with ≤ 6 invaders | 5% | 8.48% | **12.15%** |
+  | wave transitions | 50 (D17) | 24 | **488** |
+  | game overs | 200 | 675 | **6,291** |
+  | UFO visible | 1% | 17.51% | **18.35%** |
+  | shields ≤ 50% | 10% | 15.26% | **15.70%** |
+
+  Life losses 17,621; max score 2,155. UFO pixel heuristic agrees with RAM[76] on 99.93% of frames. Wave transitions grew 20× for 10× the data: the ε=0.05 job (mean score 726, ~1,000 steps per episode). The wave-start montage shows full formations at score ~630, the value of a cleared wave 1 (36 aliens, 5-30 points per row).
+
+**Do the CP4 models use the actions?** (reason the chain does not wait for CP5-C). Player x (centroid of green pixels in rows 72-79) in the real and generated panels of the four `d11_steps2` rollout videos (aug model, Euler N=2): mean |real - generated| is 0.0-0.3 px over h=1-20 in all four, while the real ship moves over x≈18-54. The ship has no momentum, so tracking its reversals needs the actions. Later gaps: 0.4-5.2 px at h=20-50, 3.6-15 px at h=50-200 (drift). The model does not register hits (generated score stays ~5 while the real one passes 100), which is a dynamics problem (rare, few-pixel events), not action input.
+
+Size and time estimates (before collection):
 
 Size and time estimates:
 - Disk: `data/debug` is 740 MiB for 500,688 rows, ~1.5 GB per million rows (the ROADMAP guessed 4–8 GB). 5M rows ≈ 7.5 GB.
@@ -63,12 +90,13 @@ From the repo root on `cp5/B-fullrun` (or `main` after CP5), venv active. `S=/da
 - **New test file `tests/test_fullrun.py`.** CP5-B's Owns list has no test file, and its two tests (dry run, validator) need real data. The config and chain-script checks are cheap and catch typos before a multi-day job.
 - **Batch 128, 200k steps.** The roadmap says 64–128 and "as many steps as compute allows". 200k is a starting point; adjust from the measured throughput.
 - **`keep_last: 5`.** Each `base` checkpoint is ~0.55 GB, so 5 keep 50k steps of history in ~2.75 GB under `runs/`.
-- **Collection is not on day 1 of CP5 yet** (needs Discovery or another machine with disk).
+- **`coverage_report.py --out-dir runs/coverage_full`**, since the script names its outputs `cp2_coverage_*` and the default dir would overwrite the CP2 figures.
 
 ## Interface change requests
 None.
 
 ## Follow-ups
-- **Before launching the chain:** have CP5-C run `action_sensitivity.py` on the CP4 aug checkpoint (`--set num_steps=2`). If the model ignores actions and CP5-C adds `action_input: adagn+planes`, `final.yaml` needs that key and the run should start with it rather than restart days in.
+- The chain does not wait for CP5-C: the CP4 aug model tracks the real ship to < 0.3 px over 20 steps (Results), so an `action_input` change is unlikely. If CP5-C still adds `action_input: adagn+planes`, `final.yaml` needs that key and the run restarts.
+- The missed hits (score never increases in rollouts) are the thing to watch in the intermediate `eval_rollouts.py --n 16` checks; more kills in `data/full` and the larger model are the expected fix.
 - Human play: nobody has recorded yet (target ≥ 1 h). Each person uses their own `first_worker` in `configs/data/human.yaml`.
 - Record the measured `base` throughput, the coverage table, and the final checkpoint path here.
