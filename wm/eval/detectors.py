@@ -58,9 +58,8 @@ def laser_present(frames: np.ndarray) -> np.ndarray:
     return out
 
 
-def calibrate_player_x(frames: np.ndarray, ram: np.ndarray) -> dict[str, float]:
-    """Least-squares map RAM player x -> detected column, and the detector's MAE (pixels) around it."""
-    x = player_x(frames)
+def calibrate_player_x(x: np.ndarray, ram: np.ndarray) -> dict[str, float]:
+    """Least-squares map RAM player x -> detected column `x` (from `player_x`), and the detector's MAE (pixels) around it."""
     ok = ~np.isnan(x)
     r = ram[ok, ram_map.PLAYER_X].astype(np.float64)
     slope, intercept = np.polyfit(r, x[ok], 1)
