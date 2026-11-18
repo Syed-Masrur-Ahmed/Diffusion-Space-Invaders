@@ -54,9 +54,9 @@ to see what already exists.
 | CP3 | B: Trainer | `cp3/B-trainer` | Syed | DONE |
 | CP3 | C: U-Net denoiser | `cp3/C-unet` | Michael | DONE |
 | CP3 | Integration: WorldModel loader (carry-over) | `cp3/loader` | Syed | DONE |
-| CP4 | A: Autoregressive rollouts and horizon evaluation | `cp4/A-rollout` | Aunonto | TODO |
-| CP4 | B: Context noise augmentation runs | `cp4/B-noiseaug` | Syed | TODO |
-| CP4 | C: Inference engine and sampler benchmarks | `cp4/C-inference` | Michael | TODO |
+| CP4 | A: Autoregressive rollouts and horizon evaluation | `cp4/A-rollout` | Aunonto | DONE |
+| CP4 | B: Context noise augmentation runs | `cp4/B-noiseaug` | Syed | DONE |
+| CP4 | C: Inference engine and sampler benchmarks | `cp4/C-inference` | Michael | DONE |
 | CP5 | A: Controllability evaluation and inverse dynamics | `cp5/A-control` | Aunonto | TODO |
 | CP5 | B: Full dataset and final training run | `cp5/B-fullrun` | Syed | TODO |
 | CP5 | C: Action conditioning and classifier-free guidance | `cp5/C-cfg` | Michael | TODO |
@@ -159,19 +159,55 @@ to see what already exists.
   sampler now draws its initial noise on the generator's device and the eval uses a CPU
   generator (D21), so the eval reproduces on CPU, MPS and CUDA.
 
-**Carried over to CP4:**
+**CP4 (merged 2026-11-18, tag `cp4`, details in `progress/cp4-A.md`, `cp4-B.md`, `cp4-C.md`):**
 
-- CP3 integration checks ran on a ~20k-step `small` checkpoint, not the planned 50k
-  (`runs/20261105-0558_debug_small`). The model's SSIM (0.740) is well below copy-last's (0.964)
-  because of faint speckle on the black background; one sample also gets a score digit wrong.
-  Check whether more steps or more sampler steps (CP4-C benchmark) fix this. Rerun the eval on
-  the same 2,048 windows as the copy-last row, not only 64.
-- CP4-C: `WorldModel` already loads checkpoints and samples (see CP3 above). CP4-C still owns
-  `wm/inference.py` and adds `channels_last`, optional bf16/fp16 autocast, and the benchmark.
-  Checkpoint layout: `model` and `ema` are the **network** state dicts (UNet keys, no
-  `net.` or `_orig_mod.` prefix); `config` is the full train config as a dict.
-- CP4-B: context noise goes in `Trainer._inputs` (now `torch.zeros_like(actions)`). Draw it
-  from the global torch RNG so exact resume still holds, and log the level distribution.
+- `wm/eval/rollout.py` (`rollout` with the 4.11 alignment, `horizon_metrics`,
+  `load_trajectories`), `wm/eval/plots.py` (`plot_horizon`, `save_rollout_video`), and
+  `scripts/eval_rollouts.py` + `configs/eval/rollouts.yaml` (`--models copy_last <ckpt>...`,
+  `ctx_levels` sweep, `metrics.json`/`.csv`, `horizon.png`, real | generated | diff MP4s).
+- Context noise augmentation (4.8) in `Trainer._inputs` (`context_noise`, `shared` and
+  `per_frame`, global torch RNG so exact resume holds, `aug_max=0` draws nothing). Val loss and
+  sample grids use clean context. Logs the `train/ctx_level` histogram and
+  `loss_by_ctx_level/*`. `configs/train/debug_{noaug,aug}.yaml` differ from `debug.yaml` only
+  in `name` and `aug_max` (0 / 0.7).
+- `WorldModel` stores the net channels-last and takes optional fp16/bf16 autocast
+  (keyword-only `channels_last`, `amp_dtype`; frozen signatures unchanged).
+  `scripts/bench_sampling.py` + `configs/eval/bench_sampling.yaml` time and score
+  Euler/Heun × {1, 2, 3, 5, 10} steps and propose D11 (`propose_d11`).
+- Two 50k-step `small` runs on Discovery: `runs/20261117-0431_debug_noaug` and
+  `runs/20261117-0431_debug_aug` (EMA `checkpoints/ckpt_last.pt`). Integration results are in
+  1.5. Main figure, first version: `docs/figures/cp4_horizon.png`.
+
+**Carried over to CP5:**
+
+- **Train with context noise from now on** (`aug_max` 0.7, `shared`), and sample with
+  inference `ctx_level` 0. Never run a checkpoint trained with `aug_max = 0` at a level above
+  0: its level embeddings 1-9 are untrained and the rollout collapses.
+- **D11 is still open.** The benchmark rule picks 1 Euler step, but teacher-forced PSNR
+  *falls* as steps increase (36.0 dB at 1 step, 32.2 at 10), because a 1-step sample is
+  close to the blurry mean frame. Keep the default at Euler N=3 until `eval_rollouts.py` on
+  the aug checkpoint at `--set num_steps=1` vs 3 (horizon curves plus videos) settles it.
+  The `propose_d11` rule should compare rollout LPIPS rather than one-step PSNR.
+- **Heun N=2 fails** (11.2 dB PSNR, LPIPS 0.51) while N=1, 3, 5, 10 are sane. Likely cause
+  (not checked): the N=2 schedule is [5, 0.002, 0], so the only Heun correction is
+  evaluated at σ_min and amplified ~1,250×. Needs a test in `wm/diffusion/sampler.py`.
+  Don't use Heun below 5 steps until then.
+- At long horizons PSNR saturates near 16 dB for every model (static background), and SSIM
+  favours copy-last up to h≈50. Rank models on LPIPS beyond ~h=50.
+- The h ≈ 128 bump in all curves comes from the eval trajectories' shared game phase
+  (`start` 32 for every episode), not from the models.
+- Optional: sweep inference `ctx_level` 3-5 on the aug model (0-2 are identical within CI).
+  `per_frame` mode is implemented but no run uses it (CP6-C ablation).
+- CP6-B: the demo uses `ctx_level = 0` (the `predict_next` default); keep it in the demo
+  config.
+
+**Still open from CP3:**
+
+- The CP3 single-step SSIM gap (model 0.740 vs copy-last 0.964, background speckle) is not
+  re-measured on the 50k checkpoints yet. Rerun `eval_single_step.py` on the same 2,048
+  windows as the copy-last row. Checkpoint layout: `model` and `ema` are the **network**
+  state dicts (UNet keys, no `net.` or `_orig_mod.` prefix); `config` is the full train
+  config as a dict.
 - LPIPS needs AlexNet weights (233 MB) on first use. Discovery compute nodes may have no
   internet: run `python -c "import lpips; lpips.LPIPS(net='alex')"` once on a login node.
 - Copy-last PSNR is pulled up by identical frames (6.8% of debug val windows at the 100 dB
@@ -182,10 +218,8 @@ to see what already exists.
   `wm/data/dataset.py`.
 - A plain `scancel` (SIGTERM to every process) can kill loader workers before the trainer
   saves, losing up to `save_every` steps. Stop jobs with `scancel --signal=USR1 --batch <id>`.
-- CP4-C: `channels_last` and `torch.compile` are untested on the U-Net. Batch-1 `small`
-  forward at 84 on an M3: 60 ms CPU, 14 ms MPS.
-- CP4-C (D11): on Gaussian data, Euler at N=3 gives ≈ 0.53 of the true std (expect blur
-  on real frames); Heun at N=3 overshoots 3.75× before the clamp. Check both in the benchmark.
+- `torch.compile` is still untimed on the U-Net (`--set compile=true` on a CUDA bench job).
+  On the M3, channels-last and fp16 autocast were slower than fp32 NCHW on MPS (CP4-C).
 - CP5-B: collection laptop (Aunonto) has little disk left; collect `data/full/` elsewhere.
   `to_model_frame(method="max")` costs ~1.6 ms per frame (~20% of collection time); a numpy
   version would speed up CP5 collection (CP1-A-owned file, change needs the integrator).
@@ -212,7 +246,7 @@ to see what already exists.
 | D8 | Store RAM (128 bytes) per step for coverage stats and detector calibration. Never used as model input. Verified map in `wm/data/ram.py` (CP2-A). | Final (CP2-A) |
 | D9 | Ground truth for rollouts comes from deterministic replay (seed, no-op count, actions). Replay reproduces every stored frame, reward, life count and RAM byte exactly (CP2-A test). | Final (CP2-A) |
 | D10 | 84×84, `method="max"`. `area` keeps the laser in only 65.5% of frames at 84 and 96; `max` keeps 100% at both. 96/max keeps more alien shape (84/max turns aliens into blocks) and stays an option if sprite detail matters. | Final (CP1-A) |
-| D11 | Default sampling steps and classifier-free guidance weight | Open, decided in CP4-C and CP5-C |
+| D11 | Default sampling steps and classifier-free guidance weight. Steps: Euler N=3 stays the default for now. The CP4-C rule proposed 1 step (PSNR falls with more steps, so the rule picks the blurry mean); decide from rollout horizon curves at N=1 vs 3. CFG weight: CP5-C. | Open (CP4: steps pending rollout check) |
 | D12 | Training runs on Dartmouth's Discovery cluster (Slurm), with checkpoint and auto-resume so jobs survive time limits and queue waits | Final |
 | D13 | Track owners: A = Aunonto, B = Syed, C = Michael. Syed takes B because he is the only one with Discovery access (a change from the proposal's split). | Final |
 | D14 | Python 3.13 for the venv (pygame has no 3.14 wheels on macOS), enforced by `setup.sh` | Final |
@@ -223,11 +257,13 @@ to see what already exists.
 | D19 | Checkpoints store the network state dicts (`model`, `ema`) and the full train config; training data order is `randperm(n, seed + epoch)` per epoch, and the resume position is derived from `step × grad_accum`, so resume is exact with any number of workers. | Final (CP3-B) |
 | D20 | Model YAMLs hold `UNetConfig` fields except `C, K, H` (from the data); `ch` maps resolution to channel list. At 96 the 4.7 lists give 22.9M (`small`) and 52.8M (`base`), above the targets; targets apply at 84 (D10). | Final (CP3-C) |
 | D21 | The sampler draws its initial noise on the generator's device, then moves it to the model's device; `eval_single_step.py` seeds a CPU generator. The same seed then gives the same samples on CPU, MPS and CUDA (CPU vs MPS agree to 1e-6 relative on all metrics). Earlier evals seeded a generator on the model's device, so CUDA and CPU results differed (PSNR 34.36 vs 33.84). | Final (Milestone 1) |
+| D22 | Context noise augmentation is on for all training from CP5 (`aug_max` 0.7, `n_levels` 10, `shared`); inference uses `ctx_level` 0. CP4: aug beats no-aug by +2.5 dB PSNR at h=20 and h=50 and 22% lower LPIPS at h=200; levels 0-2 at inference are equal within CI. | Final (CP4) |
 
 ### 1.4 Open questions
 
-- Discovery: partition `gpuq`; Python 3.13 via uv (there is no 3.13 module). Still to record:
-  GPU type, memory, and the job time limit.
+- Discovery: partition `gpuq`; Python 3.13 via uv (there is no 3.13 module). Time limit 5
+  days. GPUs: `nvidia_l40s` (48 GB, 8 per node) and `nvidia_a100_80gb_pcie_3g.40gb` MIG
+  slices (4). A 50k-step `small` run takes ~2.4 h on one L40S (~385 samples/s).
 - How much human play to record (target: at least 1 hour total, collected during CP3 to CP5).
   `play_record.py` exists (CP3-A) but nobody has recorded yet.
 - Intel Macs: PyTorch has no Intel-Mac wheels that support Python 3.13 (CP1-A used 3.12 +
@@ -258,6 +294,10 @@ The integrator adds rows at each checkpoint.
 | 2026-11-05 | M1 | Training run `runs/20261105-0558_debug_small` (Discovery `gpuq`, `debug.yaml`, `small` U-Net, batch 64, `train.steps=20000`): 20,000 steps at ~292 samples/s (median of the logged throughput); final train loss 0.0017 (0.0019 smoothed), final val loss 0.0019. TensorBoard events in `results/milestone1/run/tb/`. |
 | 2026-11-05 | M1 | **Milestone 1 eval** (`eval_single_step.py --n 64`, 64 evenly spaced `data/debug/` val windows of 26,090, EMA, Euler N=3, seed 0, CPU-generator noise, D21), mean ± 95% CI. copy-last (0 params): PSNR 34.29 ± 4.33 dB (6.25% at the 100 dB cap), SSIM 0.9636 ± 0.0080, LPIPS 0.0122 ± 0.0030. `small` U-Net (14,263,683 params): PSNR 33.84 ± 1.13 dB, SSIM 0.7401 ± 0.0145, LPIPS 0.0081 ± 0.0026. `notebooks/milestone1.ipynb` reproduces these on MPS and CPU (rel. diff ≤ 1e-6). Results in `results/milestone1/eval/`. |
 | 2026-11-06 | M1 | Memorization check (`scripts/memorize.py`, notebook section 6): fine-tune the EMA checkpoint on 20 evenly spaced train windows, 150 steps, AdamW 1e-4, full batch, no action dropout (172 s on M3 MPS; loss 0.0004 at the end), scored on the same 20 windows (Euler N=3, seed 0). copy-last PSNR 33.78 ± 6.99, SSIM 0.9699 ± 0.0146, LPIPS 0.0114 ± 0.0062; before 33.28 ± 2.18, 0.7568 ± 0.0260, 0.0094 ± 0.0068; after 36.94 ± 0.41, 0.7798 ± 0.0217, 0.0027 ± 0.0020. The model memorizes the windows (only background speckle and one missed player sprite remain), but SSIM barely moves, so the low SSIM comes mostly from the 3-step sampler. Results in `results/milestone1/memorize/`. |
+| 2026-11-17 | CP4 | Context-noise runs (Discovery `gpuq`, one L40S each, `small` U-Net, batch 64, 50,000 steps, seed 0): `runs/20261117-0431_debug_noaug` (`aug_max` 0) and `runs/20261117-0431_debug_aug` (`aug_max` 0.7, shared), ~2 h 25 min each at ~385 samples/s. Val loss (clean context) at 48k/49k/50k: noaug 0.0015/0.0012/0.0015, aug 0.0014/0.0014/0.0020. Aug `train/ctx_level` histogram flat over 0-9. |
+| 2026-11-17 | CP4 | **Horizon comparison** (`eval_rollouts.py`, `data/eval/`, 64 trajectories, T=200, `start` 32, EMA, Euler N=3, seed 0; L40S), ctx_level 0, PSNR dB / LPIPS. h=1: copy-last 30.2/0.007, CP3 small (20k) 34.8/0.004, noaug 35.6/0.003, aug 34.5/0.005. h=20: 18.5/0.058, 20.2/0.045, 22.8/0.031, **25.3/0.025**. h=50: 15.5/0.084, 16.6/0.078, 18.3/0.062, **20.7/0.046**. h=200: 15.8/0.231, 16.4/0.204, 16.7/0.176, 16.8/**0.137**. 95% CIs ≈ ±1-1.5 dB at h ≤ 50. Aug degrades more slowly from h≈10 (expected result met). Aug at ctx_level 0/1/2 equal within CI; noaug at 1/2 collapses (untrained level embeddings). Figure: `docs/figures/cp4_horizon.png`. |
+| 2026-11-17 | CP4 | **Sampler benchmark** (`bench_sampling.py`, noaug checkpoint, L40S, batch 1, channels-last fp32; quality on 512 `data/debug/` val windows, teacher-forced). Euler 1/2/3/5/10 steps: 280/148/101/61/31 frames/s, PSNR 36.0/36.0/34.7/32.7/32.2 dB, LPIPS 0.0079/0.0078/0.0073/0.0098/0.0105. Heun 1/2/3/5/10: 277/101/62/35/17 frames/s, PSNR 36.0/**11.2**/26.8/31.6/32.1. Every setting clears 15 frames/s. `propose_d11` → Euler 1 step; not adopted (see D11). Figure: `docs/figures/cp4_sampler_bench.png`. |
+| 2026-11-18 | CP4 | Fast suite 288 passed after merging A, B, C (macOS arm64, CPU, Python 3.13.2). |
 
 ---
 
