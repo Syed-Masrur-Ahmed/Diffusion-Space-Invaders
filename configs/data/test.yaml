@@ -1,0 +1,21 @@
+# Held-out TEST trajectories (Milestone 2): same recipe as configs/data/eval.yaml, new seeds.
+# data/eval/ was used to choose ctx_level and the sampler steps (CP4), so it now counts as
+# validation. This set is evaluated once, at the end, on final models only.
+# python scripts/collect.py --config configs/data/test.yaml --workers 2 --set out_dir=<scratch>/data/test
+out_dir: data/test
+resolution: 84          # D10
+resize_method: max      # D10
+base_seed: 1500000000   # eval range [1e9, 2e9), far above data/eval's seeds (1e9 + up to a few 1e7)
+max_episode_steps: 400
+total_steps: null       # set exactly one of total_steps / total_episodes
+total_episodes: 100
+max_rows: 100000
+jobs:
+  - name: agent_eps0.2
+    policy: agent       # agent | random
+    epsilon: [0.2, 0.2] # drawn uniformly per episode; ignored for random
+    fraction: 0.7
+  - name: random
+    policy: random
+    epsilon: null
+    fraction: 0.3
