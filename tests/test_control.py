@@ -2,10 +2,18 @@
 
 import numpy as np
 import pytest
+import torch
 
+from tests.fixtures import decode_frame, make_fake_shard
 from wm.controls import ACTION_TO_MOVE_FIRE
-from wm.data.schema import ACTION_MEANINGS, NUM_ACTIONS
+from wm.data.reader import ShardReader
+from wm.data.schema import ACTION_MEANINGS, END_TRUNCATED, EVAL_SEED_BASE, NUM_ACTIONS, SOURCE_RANDOM
+from wm.data.writer import ShardWriter
+from wm.env import make_env, to_model_frame
+from wm.eval import counterfactual as cf
 from wm.eval import detectors
+from wm.eval.baselines import CopyLastFrame
+from wm.models import idm
 
 H = W = 84
 GROUND_RGB = (80, 89, 22)
@@ -72,8 +80,6 @@ def test_calibration_recovers_a_linear_ram_map():
 
 
 def test_frames_from_model_output_round_trip():
-    import torch
-
     f = scene(player=20, laser_col=20)
     x = torch.from_numpy(f).permute(2, 0, 1).float()[None] / 127.5 - 1
     np.testing.assert_array_equal(detectors.to_uint8_frames(x), f[None])
@@ -89,3 +95,202 @@ def test_action_to_move_fire_covers_every_action_consistently():
         name = ACTION_MEANINGS[a]
         assert fire == ("FIRE" in name)
         assert move == (1 if "RIGHT" in name else 2 if "LEFT" in name else 0)
+
+
+# --- Inverse dynamics model ----------------------------------------------------------------
+
+
+def test_action_targets_follow_the_mapping_table():
+    move, fire = idm.action_targets(torch.arange(NUM_ACTIONS))
+    assert list(zip(move.tolist(), fire.tolist())) == [ACTION_TO_MOVE_FIRE[a] for a in range(NUM_ACTIONS)]
+
+
+@pytest.mark.parametrize("size", [84, 96])
+def test_idm_shapes_and_gradients(size):
+    model = idm.IDM(C=3, H=size, W=size)
+    f0, f1 = torch.rand(2, 2, 3, size, size) * 2 - 1
+    move, fire = model(f0, f1)
+    assert move.shape == (2, 3) and fire.shape == (2, 2)
+    (move.sum() + fire.sum()).backward()
+    assert all(p.grad is not None and p.grad.abs().sum() > 0 for p in model.parameters())
+
+
+def test_idm_overfits_256_fake_pairs():
+    torch.manual_seed(0)
+    f0, f1 = torch.rand(2, 256, 3, 12, 12) * 2 - 1
+    actions = torch.randint(0, NUM_ACTIONS, (256,))  # random labels: memorized, not learned
+    model = idm.IDM(C=3, H=12, W=12, ch=(8, 16), hidden=64)
+    opt = torch.optim.Adam(model.parameters(), lr=3e-3)
+    for _ in range(100):  # full batch; reaches 100% at ~50 steps
+        loss, _ = idm.loss_and_accuracy(model, f0, f1, actions)
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
+    _, acc = idm.loss_and_accuracy(model, f0, f1, actions)
+    assert acc["move"] == 1.0 and acc["fire"] == 1.0
+
+
+def test_idm_checkpoint_round_trip(tmp_path):
+    model = idm.IDM(C=3, H=16, W=16, ch=(8, 16), hidden=32)
+    idm.save_idm(tmp_path / "idm.pt", model, step=7)
+    loaded = idm.load_idm(tmp_path / "idm.pt")
+    f0, f1 = torch.rand(2, 4, 3, 16, 16)
+    for a, b in zip(model.eval()(f0, f1), loaded(f0, f1)):
+        torch.testing.assert_close(a, b)
+
+
+# --- Counterfactual branches and metrics ---------------------------------------------------
+
+K = 4
+PROGRAMS = [ACTION_MEANINGS.index(p) for p in cf.PROGRAMS]
+
+
+@pytest.fixture
+def encoded_dir(tmp_path):
+    make_fake_shard(tmp_path / "enc", 3, [60, 20, 45], 8, 8)  # episode 1 is too short for min_step + horizon
+    return tmp_path / "enc"
+
+
+def test_pick_branches_alignment(encoded_dir):
+    reader_rows = {}
+    for b in cf.pick_branches([encoded_dir], n=2, K=K, horizon=10, min_step=12, seed=0, require_ready=False):
+        r = ShardReader(b.shard)
+        start, length = int(r.episodes["start"][b.episode]), int(r.episodes["length"][b.episode])
+        assert 12 <= b.t <= length - 1 - 10
+        assert [decode_frame(f)[0] for f in b.frames] == list(range(start + b.t - K + 1, start + b.t + 1))
+        np.testing.assert_array_equal(b.prefix_actions, r.read("actions", slice(start, start + b.t)))
+        np.testing.assert_array_equal(b.context_actions, b.prefix_actions[-(K - 1):])
+        assert b.seed == r.episodes["seed"][b.episode]
+        assert b.laser_idle == (r.read("ram", slice(start + b.t, start + b.t + 1))[0, cf.PLAYER_LASER_Y] == cf.LASER_IDLE)
+        reader_rows[b.episode] = b.t
+    assert sorted(reader_rows) == [0, 2]  # spread over the two long-enough episodes
+
+
+def test_pick_branches_is_seeded_and_rejects(encoded_dir):
+    pick = lambda seed: [b.t for b in cf.pick_branches([encoded_dir], 2, K, 10, 12, seed, require_ready=False)]  # noqa: E731
+    assert pick(0) == pick(0)
+    with pytest.raises(ValueError):
+        cf.pick_branches([encoded_dir], 3, K, 10, 12, 0, require_ready=False)
+    with pytest.raises(ValueError):  # encoded frames have no player (and their RAM bytes are never 246 at 85)
+        cf.pick_branches([encoded_dir], 1, K, 10, 12, 0)
+
+
+class ActionEcho(CopyLastFrame):
+    """Writes the oldest action of its window into R and the newest into G of every pixel."""
+
+    def predict_next(self, context, actions, num_steps=None, cfg_scale=None, ctx_level=0, generator=None):
+        out = torch.zeros(len(context), 3, self.H, self.W)
+        out[:, 0] = actions[:, 0, None, None].float() * 20
+        out[:, 1] = actions[:, -1, None, None].float() * 20
+        return out / 127.5 - 1
+
+
+def test_model_branches_feed_context_actions_then_the_program(encoded_dir):
+    branches = cf.pick_branches([encoded_dir], 2, K, 10, 12, 0, require_ready=False)
+    model = ActionEcho(K, 3, 8, 8)
+    out = cf.model_branches(model, branches, PROGRAMS, horizon=5, batch_size=5)
+    assert out.shape == (2, len(PROGRAMS), 6, 8, 8, 3) and out.dtype == np.uint8
+    for b, br in enumerate(branches):
+        for p, prog in enumerate(PROGRAMS):
+            np.testing.assert_array_equal(out[b, p, 0], br.frames[-1])  # step 0 is the real branch frame
+            assert out[b, p, 1, 0, 0, 1] == 20 * prog  # g_{t+1} comes from the program's first action
+            assert out[b, p, 1, 0, 0, 0] == 20 * br.context_actions[0]  # window starts at a_{t-K+1}
+            assert out[b, p, K, 0, 0, 0] == 20 * prog  # by step K the whole window is the program
+
+
+def test_copy_last_branches_repeat_the_branch_frame(encoded_dir):
+    branches = cf.pick_branches([encoded_dir], 2, K, 10, 12, 0, require_ready=False)
+    out = cf.model_branches(CopyLastFrame(K, 3, 8, 8), branches, PROGRAMS, horizon=4, batch_size=7)
+    for b, br in enumerate(branches):
+        assert (out[b] == br.frames[-1]).all()
+
+
+def test_ordering_accuracy_with_margin():
+    x = np.full((4, len(PROGRAMS), 3), 40.0)
+    L, N, R = (cf.PROGRAMS.index(p) for p in ("LEFT", "NOOP", "RIGHT"))
+    x[0, L, -1], x[0, R, -1] = 30, 50           # ordered
+    x[1, L, -1], x[1, R, -1] = 38.5, 50         # LEFT within the 2-px margin
+    x[2, L, -1], x[2, N, -1] = 30, np.nan       # player not found under NOOP
+    x[3, L, -1], x[3, R, -1] = 30, 50
+    x[3, L, -2] = 0                              # only the last step counts
+    assert cf.ordering_accuracy(x, margin=2.0) == 0.5
+    assert cf.ordering_accuracy(np.full((3, len(PROGRAMS), 2), 40.0), 2.0) == 0.0  # copy-last
+
+
+def test_mean_dx_ignores_missing_steps():
+    x = np.zeros((2, len(PROGRAMS), 4))
+    R = cf.PROGRAMS.index("RIGHT")
+    x[0, R] = [10, 12, 14, 16]
+    x[1, R] = [20, np.nan, 26, 30]  # only the 26 -> 30 step is usable
+    assert cf.mean_dx(x)["RIGHT"] == pytest.approx((2 + 2 + 2 + 4) / 4)
+    assert cf.mean_dx(x)["NOOP"] == 0
+
+
+def test_fire_response_conditions_on_idle_laser_and_window():
+    laser = np.zeros((4, len(PROGRAMS), 6), bool)
+    F = cf.PROGRAMS.index("FIRE")
+    laser[0, F, 2] = True   # within 3 steps
+    laser[1, F, 5] = True   # too late
+    laser[2, F, 1] = True   # branch 2 already had a laser in flight: excluded
+    laser[3, F, 0] = True   # a laser at step 0 does not count as a response
+    laser[0, cf.PROGRAMS.index("RIGHTFIRE"), 3] = True
+    idle = np.array([True, True, False, True])
+    assert cf.fire_response(laser, idle, ["FIRE"], window=3) == (pytest.approx(1 / 3), 3)
+    assert cf.fire_response(laser, idle, ["FIRE", "RIGHTFIRE"], window=3) == (pytest.approx(2 / 6), 6)
+
+
+# --- Real emulator reference (needs ALE) ---------------------------------------------------
+
+REAL_STEPS = 70  # past the ~32-step start-up phase, so the player responds to input
+
+
+def collect_real(out_dir, n_episodes: int = 2, steps: int = REAL_STEPS):
+    """A tiny real shard: seeded episodes of random actions, written like scripts/collect.py does."""
+    rng = np.random.default_rng(0)
+    attrs = {"env_id": "ALE/SpaceInvaders-v5", "frameskip": 4, "maxpool": True, "resolution": 84,
+             "resize_method": "max", "collector_config": {"fixture": "test_control"}}
+    with ShardWriter(out_dir, worker=0, frame_shape=(84, 84, 3), attrs=attrs) as w:
+        for e in range(n_episodes):
+            env = make_env(EVAL_SEED_BASE + e)
+            obs, info = env.reset()
+            ale = env.unwrapped.ale
+            w.begin_episode(to_model_frame(obs, 84, "max"), ale.getRAM(), info["lives"], info["seed"],
+                            info["noops"], SOURCE_RANDOM, -1.0)
+            for _ in range(steps):
+                a = int(rng.integers(NUM_ACTIONS))
+                obs, reward, _, _, info = env.step(a)
+                w.add_step(a, reward, to_model_frame(obs, 84, "max"), ale.getRAM(), info["lives"])
+            w.end_episode(END_TRUNCATED, terminated=False)
+            env.close()
+    return out_dir
+
+
+@pytest.fixture(scope="module")
+def real_dir(tmp_path_factory):
+    return collect_real(tmp_path_factory.mktemp("real"))
+
+
+@pytest.mark.env
+def test_real_branches_match_a_fresh_replay(real_dir):
+    (branch,) = cf.pick_branches([real_dir], 1, K, horizon=10, min_step=40, seed=0)
+    frames, ended = cf.real_branches(branch, PROGRAMS, horizon=10)
+    assert frames.shape == (len(PROGRAMS), 11, 84, 84, 3) and not ended.any()
+    for p in (cf.PROGRAMS.index("LEFT"), cf.PROGRAMS.index("FIRE")):  # each branch starts from the same state
+        env = make_env(branch.seed)
+        env.reset()
+        for a in branch.prefix_actions:
+            env.step(int(a))
+        for s in range(1, 11):
+            obs, *_ = env.step(PROGRAMS[p])
+            np.testing.assert_array_equal(frames[p, s], to_model_frame(obs, 84, "max"), err_msg=f"program {p} step {s}")
+    assert branch.laser_idle and not np.isnan(detectors.player_x(branch.frames[-1:]))[0]
+    x = detectors.player_x(frames[:, -1])
+    assert x[cf.PROGRAMS.index("LEFT")] < x[cf.PROGRAMS.index("NOOP")] < x[cf.PROGRAMS.index("RIGHT")]
+
+
+@pytest.mark.env
+def test_real_branches_refuse_a_branch_the_replay_does_not_reach(real_dir):
+    (branch,) = cf.pick_branches([real_dir], 1, K, horizon=10, min_step=40, seed=0)
+    branch.prefix_actions = branch.prefix_actions[:-1]
+    with pytest.raises(RuntimeError, match="does not reach"):
+        cf.real_branches(branch, PROGRAMS, horizon=2)
