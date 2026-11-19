@@ -78,7 +78,24 @@ Its false positives are alien bullets (same grey) falling through the launch zon
 
 **Inverse dynamics on real val** (`data/debug/` val split, 23,260 transitions; `python scripts/train_idm.py --config configs/train/idm.yaml --set num_workers=3`, 4,000 steps at batch 128, CPU):
 
-*Training on the laptop CPU (about 2.7 s per step with lazy HDF5 loading; started 2026-11-18). Numbers go here when it finishes. The Discovery job below produces the same table in a few minutes.*
+1.32M params, 6,281 s (about 1.6 s per step, limited by HDF5 decoding). Checkpoint at `runs/idm/idm.pt` (not in git).
+
+| head | accuracy | majority baseline | confusion (rows true, cols predicted) |
+|---|---|---|---|
+| move (none / right / left) | **0.814** | 0.402 | [[4241, 1141, 759], [192, 8689, 460], [549, 1238, 5991]] |
+| fire (no / yes) | **0.655** | 0.607 | [[3066, 6072], [1957, 12165]] |
+
+- **Move is learned:** about twice the majority baseline. Most errors are "none" predicted as a move and LEFT predicted as RIGHT. The player moves only about 0.5 px per step at 84, so a one-step move is often less than a pixel.
+- **Fire is barely above majority, as expected.** FIRE is a no-op while a laser is in flight, which is most of the time, so the head mostly predicts "fire" (the agent's more common action).
+
+**IDM on the counterfactual branches** (known actions: every consecutive pair of each 30-step program, 64 × 6 × 30 = 11,520 pairs). Same command with `--set idm=runs/idm/idm.pt`:
+
+| source | move | fire |
+|---|---|---|
+| real emulator | 0.705 | 0.594 |
+| copy-last | 0.333 | 0.500 |
+
+The real-branch numbers are the ceiling for a model's rollouts, measured on the same branches. They are below the val numbers because constant programs include long stretches where the action has no visible effect: the player pinned against a wall or dead, and held FIRE with a laser in flight. Copy-last's frames never change, so the IDM always says "no move, no fire". That's right for 1 of the 3 move programs and 3 of the 6 fire labels.
 
 **For Syed (Discovery).** One job trains the IDM, and the second runs the counterfactuals on the aug-on checkpoint, scoring them with that IDM. `num_steps=2` is D11; the CP4 checkpoints store 3. `cfg_scale` stays at the checkpoint default (`w`=1) until CP5-C's sweep picks a weight; the integration check reruns the second command with `--set cfg_scale=<w>` and the CP5-B checkpoint.
 
