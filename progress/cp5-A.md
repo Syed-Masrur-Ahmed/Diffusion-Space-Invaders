@@ -9,7 +9,7 @@
   - Metric helpers `ordered`, `mean_dx` and `fire_response`.
 - `wm/models/idm.py`: `IDM`, a CNN on `concat(f_t, f_{t+1})` with move (3) and fire (2) heads, plus `action_targets` (from `ACTION_TO_MOVE_FIRE`), `loss_and_accuracy`, `save_idm` and `load_idm`.
 - `scripts/eval_counterfactual.py`: real emulator plus any models. Reports ordering accuracy, Δx per step, fire response with a no-fire control, the final-x error against the real game, and IDM accuracy, and writes `counterfactual.png`. `scripts/train_idm.py` trains on the train split and reports accuracy, confusion matrices and majority baselines on the whole val split.
-- **Real reference and copy-last on `data/eval`** (64 branches): see Results. **The CP4 aug-on model is not run yet**, because its checkpoint is only on Discovery. The command for Syed is below. That leaves the Done criterion ("results for the CP4 aug-on model") open.
+- **Done criterion met (Discovery, 2026-11-20):** IDM trained on GPU, counterfactuals for the real emulator, copy-last, the CP4 aug-on model and the CP5-B final checkpoint on the same 64 branches. **Both models are controllable:** LEFT/NOOP/RIGHT ordered on 97% (aug) and 94% (final) of the branches where the real game is ordered, and IDM move accuracy within 0.015 of the real-emulator ceiling. See Results.
 
 ## Files
 Created: `scripts/eval_counterfactual.py`, `scripts/train_idm.py`, `configs/eval/counterfactual.yaml`, `configs/train/idm.yaml`, `tests/test_control.py`, `progress/cp5-A.md`.
@@ -60,7 +60,23 @@ Commands (macOS x86_64 i5, 4 threads, Python 3.12.6, torch 2.2.2, ale-py 0.10.2,
 
 Its false positives are alien bullets (same grey) falling through the launch zone, which is why the script reports the no-fire programs as a control.
 
-**Counterfactuals:**
+**Counterfactuals on Discovery (the numbers to use).** One job (`sbatch --wrap`, one GPU): `train_idm.py` on `$D/debug`, then `eval_counterfactual.py --models copy_last <CP4 aug> <CP5-B final> --set num_steps=2 --set idm=runs/idm/idm.pt` on `$D/eval`. `cfg_scale` is each checkpoint's default (`w`=1), context level 0. Output `runs/eval_counterfactual/cp5_aug/` (metrics.json, counterfactual.png; not in git).
+
+| source | ordering acc. (on 36 real-ordered) | Δx/step LEFT | NOOP | RIGHT | fire response (n=192) | no-fire control | IDM move | IDM fire |
+|---|---|---|---|---|---|---|---|---|
+| real emulator | 0.562 (36/64) | −0.614 | −0.250 | +0.267 | 0.625 | 0.062 | 0.689 | 0.575 |
+| copy-last | 0.000 (0.000) | 0 | 0 | 0 | 0.062 | 0.062 | 0.333 | 0.500 |
+| CP4 aug-on (`20261117-0431_debug_aug`, 14.3M) | 0.562 (**0.972**, 35/36) | −0.370 | −0.020 | +0.416 | 0.536 | 0.062 | **0.675** | 0.547 |
+| CP5-B final (`20261118-0501_final`, 200k, 34.4M) | 0.547 (**0.944**, 34/36) | −0.383 | −0.023 | +0.389 | **0.599** | 0.062 | **0.681** | 0.571 |
+
+- **Movement control is close to the real game.** Overall ordering matches the real game's (0.56); on the branches where the real game is ordered, the models order 35/36 and 34/36. IDM move accuracy is 98% (aug) and 99% (final) of the real ceiling, against 0.333 for copy-last.
+- **Δx has the right sign under every program, but NOOP stays put** (−0.02 vs real −0.25). The real NOOP drift is the respawn at the left wall after a life loss, so the models probably rarely kill the player within 30 steps. That matches CP5-B's finding that rollouts miss rare events (hits). The real LEFT Δx is more negative for the same reason.
+- **Fire responds:** 0.54 (aug) and 0.60 (final) against a real rate of 0.625, with the no-fire rate at the detector's 0.062 floor for every source. The final model is closest; the IDM fire head agrees (0.571 vs ceiling 0.575).
+- **Final vs CP4 aug-on:** about equal on movement (one branch fewer ordered, IDM move +0.006), better on fire. The larger model and data did not change controllability much because the aug model already had it.
+- IDM (Discovery, `runs/idm/idm.pt`): 4,000 steps in 150 s on GPU; real val (26,192 transitions) **move 0.824** (majority 0.396), **fire 0.641** (majority 0.601). Same picture as the local CPU run below.
+- Calibration on this `data/eval`: x = 0.5251 · RAM[28] + 0.770, MAE 0.278 px over 37,924 frames (1,936 without a player).
+
+**Earlier local run** (on a different copy of `data/eval`, see Deviations; not comparable to the table above):
 
 `python scripts/eval_counterfactual.py --config configs/eval/counterfactual.yaml --models copy_last`
 
@@ -70,7 +86,6 @@ Its false positives are alien bullets (same grey) falling through the launch zon
 |---|---|---|---|---|---|---|
 | real emulator | 0.719 (46/64) | −0.603 | −0.118 | +0.433 | 0.766 | 0.068 |
 | copy-last | 0.000 (0.000 on the 46 real-ordered) | 0 | 0 | 0 | 0.047 | 0.047 |
-| CP4 aug-on | *pending (Discovery)* | | | | | |
 
 - **The real game's ordering accuracy is 0.72, not 1.** Nearly all remaining failures are life losses in the 30 steps: the player respawns at the left wall (x=19) under every program, which also gives NOOP its negative Δx. For models the script also reports ordering accuracy on the 46 branches where the real game is ordered, which removes that ceiling.
 - **The real fire response is 0.77, not 1.** Even with no laser in flight, a held FIRE launches within 3 steps only about half to three-quarters of the time. RAM shows another gate, probably the explosion of the previous shot. Compare the model against the real rate, not against 1.
@@ -97,7 +112,7 @@ Its false positives are alien bullets (same grey) falling through the launch zon
 
 The real-branch numbers are the ceiling for a model's rollouts, measured on the same branches. They are below the val numbers because constant programs include long stretches where the action has no visible effect: the player pinned against a wall or dead, and held FIRE with a laser in flight. Copy-last's frames never change, so the IDM always says "no move, no fire". That's right for 1 of the 3 move programs and 3 of the 6 fire labels.
 
-**For Syed (Discovery).** One job trains the IDM, and the second runs the counterfactuals on the aug-on checkpoint, scoring them with that IDM. `num_steps=2` is D11; the CP4 checkpoints store 3. `cfg_scale` stays at the checkpoint default (`w`=1) until CP5-C's sweep picks a weight; the integration check reruns the second command with `--set cfg_scale=<w>` and the CP5-B checkpoint.
+**Discovery commands (run 2026-11-20 as one `sbatch --wrap` job; results above).** Note: `eval.sbatch` `exec`s its `CMD`, so it cannot chain two commands with `&&`; use two jobs as below or `--wrap`. Give the pair ≥ 1 h. One job trains the IDM, and the second runs the counterfactuals on the aug-on checkpoint, scoring them with that IDM. `num_steps=2` is D11; the CP4 checkpoints store 3. `cfg_scale` stays at the checkpoint default (`w`=1) until CP5-C's sweep picks a weight; the integration check reruns the second command with `--set cfg_scale=<w>` and the CP5-B checkpoint.
 
 ```bash
 D=/dartfs-hpc/scratch/f0079km/wm/data
@@ -129,10 +144,13 @@ The cost is small on a GPU:
 - **Two new configs** (`configs/eval/counterfactual.yaml`, `configs/train/idm.yaml`) aren't in the Owns list. 4.12 needs `--config`. Same as CP4-A and CP5-C.
 - `eval_counterfactual.py` reuses `build_models` from `scripts/eval_rollouts.py`, so copy-last and the checkpoints load and sweep `ctx_levels` exactly as in the CP4 eval.
 
+- **Two copies of `data/eval`.** The local run above used a 39,631-row copy, on a machine with ale-py 0.10.2. Discovery's copy has 39,860 rows, so `pick_branches` draws different branches and the real reference differs (ordering 0.719 vs 0.562). Rerunning the real reference and copy-last on a machine with the 39,860-row copy (ale-py 0.12.1) reproduces the Discovery numbers exactly. Compare models only within one table.
+
 ## Interface change requests
 None. The RAM laser byte (85, idle value 246) could be added to `wm/data/ram.py` by its owner.
 
 ## Follow-ups
-- **Done criterion:** run the Discovery commands above for the CP4 aug-on model, then fill in the table. Then do the CP5 integration check: the CP5-B checkpoint, CP5-C's `w`, and `docs/figures/cp5_counterfactual.png`.
+- **CP5 integration:** the final checkpoint is already in the Discovery table at `w`=1. If CP5-C's sweep picks `w` > 1, rerun the counterfactual command with the final checkpoint and `--set cfg_scale=<w>`. Then save that run's `counterfactual.png` (or this one's, if `w` stays 1) as `docs/figures/cp5_counterfactual.png`.
+- NOOP Δx and the respawn: check in CP6 whether the models ever lose a life in the 30-step branches. The NOOP gap (−0.02 vs −0.25) is the visible sign that they don't.
 - The model's fire response depends on it drawing the shot in the first 3 steps. If it draws the shot one step late, widen `fire_window` rather than reading it as no control.
 - On the real branches the player is missing on 4.4% of program steps (deaths and respawns). `player_missing` in the JSON reports this per source, so a model that loses the player sprite shows up there.
