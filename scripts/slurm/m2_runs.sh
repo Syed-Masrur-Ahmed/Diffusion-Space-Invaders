@@ -6,6 +6,13 @@
 #   DATA_ROOT=<scratch>/data bash scripts/slurm/m2_runs.sh subsets         # E6 subset dirs (login node, no job)
 #   DATA_ROOT=<scratch>/data bash scripts/slurm/m2_runs.sh train           # R0, E5 placebo, E6, E7, E8 training runs
 #   DATA_ROOT=<scratch>/data bash scripts/slurm/m2_runs.sh eval            # E4: copy-last, M1, final on full val, step >= 60
+#   DATA_ROOT=<scratch>/data bash scripts/slurm/m2_runs.sh posteval        # E5-E8 evals of every finished training run
+#
+# posteval evaluates each run's ckpt_0050000.pt (the step file the trainer writes at train.steps; ckpt_last.pt
+# also exists after a time-limit stop) and skips unfinished runs and evals whose metrics.json already exists,
+# so run it again as more runs finish. Per run: single-step metrics on the E4 windows, rollouts on data/eval.
+# R0 also gets X2 (sampler steps 3 instead of the default 2). One counterfactual job scores copy-last and
+# every finished run against the real emulator, with the CP5 IDM (E5: placebo vs R0).
 #
 # Every training run is configs/train/debug.yaml (small U-Net, batch 64, 50k steps, aug_max 0, seed 0)
 # on data/full with exactly one change. R0 has no context noise, so X1 (aug_max 0.7) is one change.
@@ -15,7 +22,7 @@
 #
 # Settings: DATA_ROOT (required), PARTITION (gpuq), GRES (gpu:nvidia_l40s:1), CPU_PARTITION (standard),
 # TIME_SMALL (06:00:00), TIME_BASE (12:00:00), DRY_RUN=1, and for `eval` M1_CKPT and FINAL_CKPT (the CP3 and
-# CP5-B checkpoints, defaults below).
+# CP5-B checkpoints, defaults below), for `posteval` IDM_CKPT and RUNS_DIR (runs).
 set -euo pipefail
 : "${DATA_ROOT:?set DATA_ROOT=<scratch>/data (holds full/ and eval/)}"
 PARTITION=${PARTITION:-gpuq}
@@ -26,7 +33,11 @@ TIME_BASE=${TIME_BASE:-12:00:00}
 DRY_RUN=${DRY_RUN:-0}
 M1_CKPT=${M1_CKPT:-runs/20261105-0558_debug_small/checkpoints/ckpt_last.pt}
 FINAL_CKPT=${FINAL_CKPT:-runs/20261118-0501_final/checkpoints/ckpt_last.pt}
+IDM_CKPT=${IDM_CKPT:-runs/idm/idm.pt}
+RUNS_DIR=${RUNS_DIR:-runs}
 CONFIG=configs/train/debug.yaml
+RUNS=(r0 placebo r0_seed1 r0_seed2 data_p12 data_p25 data_p50 x1_aug x3_sigma093 x4_base)
+FINAL_STEP_FILE=ckpt_0050000.pt  # debug.yaml train.steps = 50k
 
 run() {  # print or run a command; prints the job id when it submits
   if [ "$DRY_RUN" = 1 ]; then echo "$*" >&2; else "$@"; fi
@@ -79,15 +90,65 @@ train_jobs() {
   train x4_base "$TIME_BASE" --set 'model.ch=[128,256,384]'   # E8 X4 (base width, batch 64 like R0)
 }
 
-eval_jobs() {  # one eval.sbatch job per model: eval.sbatch execs CMD, so it cannot chain commands
-  local model cmd
+gpu_eval() {  # gpu_eval <command>: one eval.sbatch job (eval.sbatch execs CMD, so one command per job)
+  [ "$DRY_RUN" = 1 ] && echo "CMD=\"$1\" \\" >&2
+  CMD=$1 run sbatch --parsable --partition="$PARTITION" --gres="$GRES" --time=01:00:00 scripts/slurm/eval.sbatch
+}
+
+single_step() {  # single_step <model> <out_dir> [--set ...]: the E4 windows (full val, target step >= 60)
+  local model=$1 out=$2
+  shift 2
+  gpu_eval "python scripts/eval_single_step.py --config configs/eval/single_step.yaml --model $model --n 2048 \
+--set 'data.dataset_dirs=[$DATA_ROOT/full]' --set min_step=60 --set out_dir=$out $*"
+}
+
+eval_jobs() {
+  local model
   [ "$DRY_RUN" = 1 ] || mkdir -p runs
   for model in copy_last "$M1_CKPT" "$FINAL_CKPT"; do
-    cmd="python scripts/eval_single_step.py --config configs/eval/single_step.yaml --model $model --n 2048"
-    cmd+=" --set 'data.dataset_dirs=[$DATA_ROOT/full]' --set min_step=60 --set out_dir=results/milestone2/e4"
-    [ "$DRY_RUN" = 1 ] && echo "CMD=\"$cmd\" \\" >&2
-    CMD=$cmd run sbatch --parsable --partition="$PARTITION" --gres="$GRES" --time=01:00:00 scripts/slurm/eval.sbatch
+    single_step "$model" results/milestone2/e4
   done
+}
+
+finished_ckpt() {  # finished_ckpt <name>: the newest m2_<name> run's final step file, or nothing
+  local d
+  for d in $(ls -d "$RUNS_DIR"/*_m2_"$1" 2>/dev/null | sort -r); do
+    [ -f "$d/checkpoints/$FINAL_STEP_FILE" ] && { echo "$d/checkpoints/$FINAL_STEP_FILE"; return 0; }
+  done
+  return 0  # nothing printed: not finished (a non-zero status would end the script under set -e)
+}
+
+rollouts() {  # rollouts <model> <out_dir> [--set ...]: 64 data/eval trajectories, T=200 (configs/eval/rollouts.yaml)
+  local model=$1 out=$2
+  shift 2
+  [ -f "$out/metrics.json" ] && return
+  gpu_eval "python scripts/eval_rollouts.py --config configs/eval/rollouts.yaml --models $model \
+--set 'dataset_dirs=[$DATA_ROOT/eval]' --set out_dir=$out $*"
+}
+
+post_eval_jobs() {
+  local name ckpt tag models=()
+  [ "$DRY_RUN" = 1 ] || mkdir -p runs
+  for name in "${RUNS[@]}"; do
+    ckpt=$(finished_ckpt "$name")
+    if [ -z "$ckpt" ]; then
+      [ "$DRY_RUN" = 1 ] || { echo "skip $name: no $FINAL_STEP_FILE yet" >&2; continue; }
+      ckpt="$RUNS_DIR/<stamp>_m2_$name/checkpoints/$FINAL_STEP_FILE"  # dry run: show the commands anyway
+    fi
+    models+=("$ckpt")
+    tag="$(basename "$(dirname "$(dirname "$ckpt")")")_${FINAL_STEP_FILE%.pt}"  # eval_single_step's model tag
+    [ -f "results/milestone2/single_step/$tag/metrics.json" ] || single_step "$ckpt" results/milestone2/single_step
+    rollouts "$ckpt" "runs/m2_eval/rollouts/$name"
+    if [ "$name" = r0 ]; then  # X2: inference only
+      [ -f "results/milestone2/single_step_n3/$tag/metrics.json" ] ||
+        single_step "$ckpt" results/milestone2/single_step_n3 --set num_steps=3
+      rollouts "$ckpt" runs/m2_eval/rollouts/r0_n3 --set num_steps=3
+    fi
+  done
+  [ ${#models[@]} -gt 0 ] || return 0
+  gpu_eval "python scripts/eval_counterfactual.py --config configs/eval/counterfactual.yaml \
+--models copy_last ${models[*]} --set 'dataset_dirs=[$DATA_ROOT/eval]' --set idm=$IDM_CKPT \
+--set out_dir=results/milestone2/counterfactual"
 }
 
 case "${1:-}" in
@@ -95,6 +156,7 @@ case "${1:-}" in
   subsets) subsets ;;
   train) train_jobs ;;
   eval) eval_jobs ;;
+  posteval) post_eval_jobs ;;
   all) data_jobs; subsets; train_jobs; eval_jobs ;;
-  *) echo "usage: $0 data|subsets|train|eval|all" >&2; exit 2 ;;
+  *) echo "usage: $0 data|subsets|train|eval|posteval|all" >&2; exit 2 ;;
 esac
