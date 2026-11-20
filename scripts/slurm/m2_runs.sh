@@ -4,7 +4,8 @@
 #   DATA_ROOT=<scratch>/data DRY_RUN=1 bash scripts/slurm/m2_runs.sh all   # print, submit nothing
 #   DATA_ROOT=<scratch>/data bash scripts/slurm/m2_runs.sh data            # data/test + data stats (CPU)
 #   DATA_ROOT=<scratch>/data bash scripts/slurm/m2_runs.sh subsets         # E6 subset dirs (login node, no job)
-#   DATA_ROOT=<scratch>/data bash scripts/slurm/m2_runs.sh train           # R0, E6, E7, E8 training runs
+#   DATA_ROOT=<scratch>/data bash scripts/slurm/m2_runs.sh train           # R0, E5 placebo, E6, E7, E8 training runs
+#   DATA_ROOT=<scratch>/data bash scripts/slurm/m2_runs.sh eval            # E4: copy-last, M1, final on full val, step >= 60
 #
 # Every training run is configs/train/debug.yaml (small U-Net, batch 64, 50k steps, aug_max 0, seed 0)
 # on data/full with exactly one change. R0 has no context noise, so X1 (aug_max 0.7) is one change.
@@ -13,7 +14,8 @@
 # Links keep the shard names, so each episode stays in the same train/val split (4.5).
 #
 # Settings: DATA_ROOT (required), PARTITION (gpuq), GRES (gpu:nvidia_l40s:1), CPU_PARTITION (standard),
-# TIME_SMALL (06:00:00), TIME_BASE (12:00:00), DRY_RUN=1.
+# TIME_SMALL (06:00:00), TIME_BASE (12:00:00), DRY_RUN=1, and for `eval` M1_CKPT and FINAL_CKPT (the CP3 and
+# CP5-B checkpoints, defaults below).
 set -euo pipefail
 : "${DATA_ROOT:?set DATA_ROOT=<scratch>/data (holds full/ and eval/)}"
 PARTITION=${PARTITION:-gpuq}
@@ -22,6 +24,8 @@ CPU_PARTITION=${CPU_PARTITION:-standard}
 TIME_SMALL=${TIME_SMALL:-06:00:00}
 TIME_BASE=${TIME_BASE:-12:00:00}
 DRY_RUN=${DRY_RUN:-0}
+M1_CKPT=${M1_CKPT:-runs/20261105-0558_debug_small/checkpoints/ckpt_last.pt}
+FINAL_CKPT=${FINAL_CKPT:-runs/20261118-0501_final/checkpoints/ckpt_last.pt}
 CONFIG=configs/train/debug.yaml
 
 run() {  # print or run a command; prints the job id when it submits
@@ -64,6 +68,7 @@ train_jobs() {
   [ "$DRY_RUN" = 1 ] && echo "# each sbatch below runs with CONFIG=$CONFIG" >&2
   [ "$DRY_RUN" = 1 ] || mkdir -p runs
   train r0 "$TIME_SMALL"                                      # R0 = E6 100% = E7 seed 0
+  train placebo "$TIME_SMALL" --set train.shuffle_actions=true  # E5: actions shuffled across samples
   train r0_seed1 "$TIME_SMALL" --set seed=1                   # E7
   train r0_seed2 "$TIME_SMALL" --set seed=2                   # E7
   train data_p12 "$TIME_SMALL" --set 'data.dirs=[full_p12]'   # E6 12.5%
@@ -74,10 +79,22 @@ train_jobs() {
   train x4_base "$TIME_BASE" --set 'model.ch=[128,256,384]'   # E8 X4 (base width, batch 64 like R0)
 }
 
+eval_jobs() {  # one eval.sbatch job per model: eval.sbatch execs CMD, so it cannot chain commands
+  local model cmd
+  [ "$DRY_RUN" = 1 ] || mkdir -p runs
+  for model in copy_last "$M1_CKPT" "$FINAL_CKPT"; do
+    cmd="python scripts/eval_single_step.py --config configs/eval/single_step.yaml --model $model --n 2048"
+    cmd+=" --set 'data.dataset_dirs=[$DATA_ROOT/full]' --set min_step=60 --set out_dir=results/milestone2/e4"
+    [ "$DRY_RUN" = 1 ] && echo "CMD=\"$cmd\" \\" >&2
+    CMD=$cmd run sbatch --parsable --partition="$PARTITION" --gres="$GRES" --time=01:00:00 scripts/slurm/eval.sbatch
+  done
+}
+
 case "${1:-}" in
   data) data_jobs ;;
   subsets) subsets ;;
   train) train_jobs ;;
-  all) data_jobs; subsets; train_jobs ;;
-  *) echo "usage: $0 data|subsets|train|all" >&2; exit 2 ;;
+  eval) eval_jobs ;;
+  all) data_jobs; subsets; train_jobs; eval_jobs ;;
+  *) echo "usage: $0 data|subsets|train|eval|all" >&2; exit 2 ;;
 esac
