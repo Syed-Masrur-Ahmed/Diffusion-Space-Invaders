@@ -5,7 +5,7 @@
 - `configs/train/final.yaml`: `base` U-Net (34,352,387 parameters), K=4, `data.dirs: [full, human]`, batch 128, 200k steps, `aug_max` 0.7 shared (D22), action dropout 0.1, sampler Euler N=2 (D11), checkpoints every 10k (keep 5). Otherwise identical to `debug.yaml`.
 - `scripts/slurm/final_chain.sh`: submits N chained `train.sbatch` jobs (`afterany`, each auto-resumes). `DRY_RUN=1` prints the commands.
 - **`data/full/` collected and validated on Discovery (2026-11-18):** 5,000,000 steps, 6,355 episodes, 7.0 GiB, all five coverage targets met (wave transitions 488 vs 24 in debug). See Results.
-- Training run: not launched yet. Commands below.
+- **Final run finished on Discovery (2026-11-19): 200,000 steps** in ~42 h on one L40S (171 samples/s). Checkpoint for CP6: **`runs/20261118-0501_final/checkpoints/ckpt_last.pt`** (= `ckpt_0200000.pt`, 525 MB, on Discovery only). See Results.
 
 ## Files
 Created: `configs/data/full.yaml`, `configs/train/final.yaml`, `scripts/slurm/final_chain.sh`, `tests/test_fullrun.py`, `progress/cp5-B.md`.
@@ -50,9 +50,14 @@ Commands (macOS arm64, M3, Python 3.13.2, CPU):
 
 **Do the CP4 models use the actions?** (reason the chain does not wait for CP5-C). Player x (centroid of green pixels in rows 72-79) in the real and generated panels of the four `d11_steps2` rollout videos (aug model, Euler N=2): mean |real - generated| is 0.0-0.3 px over h=1-20 in all four, while the real ship moves over x≈18-54. The ship has no momentum, so tracking its reversals needs the actions. Later gaps: 0.4-5.2 px at h=20-50, 3.6-15 px at h=50-200 (drift). The model does not register hits (generated score stays ~5 while the real one passes 100), which is a dynamics problem (rare, few-pixel events), not action input.
 
-Size and time estimates (before collection):
+**Final run** (`runs/20261118-0501_final`, Discovery, `final_chain.sh` defaults: 3 jobs × 2 days, `gpuq`, one L40S):
+- Started 2026-11-18 ~05:01, wrote `ckpt_0200000.pt` 2026-11-19 23:01: **~42 h for 200k steps**, all inside the first job. Jobs 2 and 3 resumed at 200k and exited at once (`finished at step 200000` in all three logs).
+- **Throughput: median 171 samples/s** (estimate was 150–200; `small` was ~385 in CP4-B).
+- **Val loss (clean context): 0.0004** at steps 192k–198k, 0.0005 at 200k. CP4's debug models were 0.0012–0.0020 at 50k, but on the `data/debug` val split, so the numbers are not directly comparable. The trainer prints 4 decimals, so the curve looks flat at this scale; the rollout eval is the comparison that matters.
+- Kept checkpoints: `ckpt_0160000.pt` … `ckpt_0200000.pt` (every 10k, `keep_last` 5) and `ckpt_last.pt`. Sample grids up to `samples/step_0200000.png`.
+- Rollout check on the final checkpoint (`eval_rollouts.py --n 16`, task 4): *pending*, command under Follow-ups.
 
-Size and time estimates:
+Size and time estimates (before collection):
 - Disk: `data/debug` is 740 MiB for 500,688 rows, ~1.5 GB per million rows (the ROADMAP guessed 4–8 GB). 5M rows ≈ 7.5 GB.
 - Collection: `data/debug` took ~15 min of worker time on 4 workers (CP2-A), so 5M is ~2.5 h on 4 workers or ~40 min on 16.
 - Training: `small` ran at ~385 samples/s on an L40S (CP4-B). `base` has 2.4× the parameters; guess 150–200 samples/s, so 200k steps × 128 = 25.6M samples is ~36–47 h. The default chain (3 jobs × 2 days) covers that with room to spare. Check `throughput` in the first job's log and set `train.steps` from it.
@@ -100,4 +105,12 @@ None.
 - The chain does not wait for CP5-C: the CP4 aug model tracks the real ship to < 0.3 px over 20 steps (Results), so an `action_input` change is unlikely. If CP5-C still adds `action_input: adagn+planes`, `final.yaml` needs that key and the run restarts.
 - The missed hits (score never increases in rollouts) are the thing to watch in the intermediate `eval_rollouts.py --n 16` checks; more kills in `data/full` and the larger model are the expected fix.
 - Human play after the final run: Aunonto and Michael record (≥ 1 h total, games ≥ 236 steps for the T=200 rollout eval), copy to `$S/human/`, `validate_data.py`, then the human-play rollout eval.
-- Record the measured `base` throughput, the coverage table, and the final checkpoint path here.
+- **Rollout check on the final checkpoint** (with copy-last and the CP4 aug model for reference), then record the table here and whether the score now increases on hits:
+  ```bash
+  R=runs/20261118-0501_final; S=/dartfs-hpc/scratch/f0079km/wm/data
+  CMD="python scripts/eval_rollouts.py --config configs/eval/rollouts.yaml \
+    --models copy_last runs/20261117-0431_debug_aug/checkpoints/ckpt_last.pt $R/checkpoints/ckpt_last.pt \
+    --n 16 --set 'dataset_dirs=[$S/eval]' --set out_dir=runs/eval_rollouts/final_done" \
+    sbatch -p gpuq --gres=gpu:nvidia_l40s:1 -t 01:00:00 scripts/slurm/eval.sbatch
+  ```
+- `$S/human/` is free to fill now that the chain has finished.
