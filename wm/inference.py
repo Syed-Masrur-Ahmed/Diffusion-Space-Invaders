@@ -41,6 +41,33 @@ def _channels_last_inputs(module: nn.Module, args: tuple) -> tuple:
             context.contiguous(memory_format=torch.channels_last), actions, ctx_level)
 
 
+def _split_action_input(config: dict) -> tuple[dict, str]:
+    """Copy of a train config with `model.action_input` removed, and that value (default adagn).
+
+    ModelSection does not have the field, so `from_dict` would reject it. CP4 checkpoints omit
+    it and stay on the AdaGN U-Net. A checkpoint that records `adagn+planes` still loads.
+    """
+    model = dict(config["model"])
+    action_input = model.pop("action_input", "adagn")
+    return {**config, "model": model}, action_input
+
+
+def _build_net(cfg, C: int, action_input: str):
+    """Denoiser for a loaded checkpoint. `adagn` goes through the trainer builder."""
+    from wm.train.trainer import build_net
+
+    if action_input == "adagn":
+        return build_net(cfg.model, C, cfg.data.K, FRAME_SIZE)
+    if cfg.model.arch != "unet":
+        raise ValueError(f"action_input={action_input!r} needs model.arch 'unet', got {cfg.model.arch!r}")
+    from wm.models.unet import UNet, UNetConfig
+
+    return UNet(UNetConfig(
+        C=C, K=cfg.data.K, H=FRAME_SIZE, ch=list(cfg.model.ch), n_res=cfg.model.n_res,
+        emb_dim=cfg.model.emb_dim, n_levels=cfg.model.n_levels, attn_lowest=cfg.model.attn_lowest,
+        dropout=cfg.model.dropout, action_input=action_input))
+
+
 def _check_amp(device: torch.device, amp_dtype: torch.dtype | None) -> torch.dtype | None:
     """fp16 or bf16 autocast, or None for fp32. bf16 on CUDA is refused when the GPU cannot run it."""
     if amp_dtype is None:
@@ -72,17 +99,19 @@ class WorldModel(WorldModelProtocol):
         Positional arguments are the frozen 4.10 signature. `channels_last` (default) and `amp_dtype`
         (None, float16, or bfloat16) are keyword-only. Autocast is internal: `predict_next` still
         returns float32. `compile` wraps the net after the channels-last conversion.
+        `model.action_input` in the checkpoint selects adagn or adagn+planes; omitted means adagn.
         """
-        from wm.train.trainer import RunConfig, build_net  # the trainer's config layout and net builder
+        from wm.train.trainer import RunConfig  # the trainer's config layout
 
         device = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
         amp_dtype = _check_amp(device, amp_dtype)
         ckpt = torch.load(path, map_location="cpu", weights_only=False)  # config and RNG states are not tensors
-        cfg = from_dict(RunConfig, ckpt["config"])
+        raw, action_input = _split_action_input(ckpt["config"])
+        cfg = from_dict(RunConfig, raw)
         if isinstance(cfg.model.ch, dict):  # configs/model/*.yaml style: ch keyed by H
             cfg.model.ch = cfg.model.ch[FRAME_SIZE]
         C = 1 if cfg.data.grayscale else 3
-        net = build_net(cfg.model, C, cfg.data.K, FRAME_SIZE)
+        net = _build_net(cfg, C, action_input)
         net.load_state_dict(ckpt["ema" if use_ema else "model"], strict=True)
         net.requires_grad_(False).to(device)
         if channels_last:

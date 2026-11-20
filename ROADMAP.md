@@ -57,9 +57,9 @@ to see what already exists.
 | CP4 | A: Autoregressive rollouts and horizon evaluation | `cp4/A-rollout` | Aunonto | DONE |
 | CP4 | B: Context noise augmentation runs | `cp4/B-noiseaug` | Syed | DONE |
 | CP4 | C: Inference engine and sampler benchmarks | `cp4/C-inference` | Michael | DONE |
-| CP5 | A: Controllability evaluation and inverse dynamics | `cp5/A-control` | Aunonto | TODO |
-| CP5 | B: Full dataset and final training run | `cp5/B-fullrun` | Syed | TODO |
-| CP5 | C: Action conditioning and classifier-free guidance | `cp5/C-cfg` | Michael | TODO |
+| CP5 | A: Controllability evaluation and inverse dynamics | `cp5/A-control` | Aunonto | DONE |
+| CP5 | B: Full dataset and final training run | `cp5/B-fullrun` | Syed | DONE |
+| CP5 | C: Action conditioning and classifier-free guidance | `cp5/C-cfg` | Michael | DONE |
 | CP6 | A: Final evaluation and figures | `cp6/A-final-eval` | Aunonto | TODO |
 | CP6 | B: Playable demo | `cp6/B-demo` | Syed | TODO |
 | CP6 | C: Ablations | `cp6/C-ablations` | Michael | TODO |
@@ -202,6 +202,47 @@ to see what already exists.
 - CP6-B: the demo uses `ctx_level = 0` (the `predict_next` default); keep it in the demo
   config.
 
+**CP5 (merged 2026-11-20, tag `cp5`, details in `progress/cp5-A.md`, `cp5-B.md`, `cp5-C.md`):**
+
+- Action CFG is locked through `sample`, `WorldModel.predict_next` and `rollout` (`w = 1`
+  is one forward; any other `w` doubles the batch with an all-`NULL_ACTION` half).
+  `UNetConfig.action_input` adds `"adagn+planes"` (one-hot latest action as 7 input planes);
+  implemented and tested, not trained or needed. `scripts/action_sensitivity.py` +
+  `configs/eval/action_sensitivity.yaml` score LEFT vs RIGHT in the player band per `w`.
+- `wm/eval/detectors.py` (`player_x`, `laser_present`, RAM calibration),
+  `wm/eval/counterfactual.py` (branch rows, real-emulator branches via `cloneState`, model
+  branches via `rollout`, ordering / Δx / fire-response metrics), `wm/models/idm.py`
+  (inverse dynamics CNN, move and fire heads), `scripts/eval_counterfactual.py` and
+  `scripts/train_idm.py` with their configs.
+- `data/full/` on Discovery (`<scratch>/data/full`): 5,000,000 steps, 6,355 episodes,
+  7.0 GiB, all coverage targets met. `configs/data/full.yaml`, `configs/train/final.yaml`
+  (`base` U-Net, 34.4M), `scripts/slurm/final_chain.sh`.
+- **Final model:** `runs/20261118-0501_final/checkpoints/ckpt_last.pt` on Discovery (200k
+  steps, `data/full` only, see D23). Results in 1.5. Figure: `docs/figures/cp5_counterfactual.png`.
+
+**Carried over to CP6:**
+
+- **Use the final checkpoint at `w = 1`, Euler N=2, `ctx_level` 0** (D11, D22). It stores
+  `num_steps: 2`, so no override is needed. The D11 step count was not rechecked on the
+  `base` model; CP6-A's horizon curves can include N=10 if long-horizon LPIPS matters.
+- **Rollouts miss rare events.** The CP4 aug model never registers hits (score stays near
+  0005), and in the counterfactuals both models hold NOOP still (Δx −0.02 vs real −0.25,
+  which comes from respawns after a life loss), so they probably rarely kill the player
+  within 30 steps. Check hits and life losses on the final model in CP6-A.
+- **Don't choose a CFG weight from `propose_cfg_weight` alone.** The LEFT/RIGHT score rises
+  with `w` for any model that reads actions, so the rule always picks the largest `w`.
+  CP6-C's CFG ablation should report CP5-A's counterfactual metrics per `w`.
+- **Use the 39,860-row `data/eval` (the CP2 integrator copy, also on Discovery).** A different 39,631-row copy on Aunonto's machine
+  gives different branches (real ordering 0.719 vs 0.562). Compare models only within one run.
+- **Human play:** record now (Aunonto `first_worker=0`, Michael `first_worker=200`, ≥ 30 min
+  each, full games ≥ 236 steps), copy to `<scratch>/data/human/`, `validate_data.py`. Use it
+  as a human-play rollout test set; a short fine-tune is optional. `final.yaml` lists
+  `dirs: [full, human]`, so a future resume of the final run would pick it up.
+- The IDM checkpoint for CP6 is `runs/idm/idm.pt` on Discovery (real val move 0.824, fire 0.641).
+- The RAM player-laser byte (85, idle 246) lives in `wm/eval/counterfactual.py`; moving it
+  into `wm/data/ram.py` is a small follow-up for its owner.
+- `base` trains at ~171 samples/s on one L40S (200k steps × batch 128 ≈ 42 h).
+
 **Still open from CP3:**
 
 - The CP3 single-step SSIM gap (model 0.740 vs copy-last 0.964) came from the N=3 sampler's
@@ -221,11 +262,6 @@ to see what already exists.
   saves, losing up to `save_every` steps. Stop jobs with `scancel --signal=USR1 --batch <id>`.
 - `torch.compile` is still untimed on the U-Net (`--set compile=true` on a CUDA bench job).
   On the M3, channels-last and fp16 autocast were slower than fp32 NCHW on MPS (CP4-C).
-- CP5-B: collection laptop (Aunonto) has little disk left; collect `data/full/` elsewhere.
-  `to_model_frame(method="max")` costs ~1.6 ms per frame (~20% of collection time); a numpy
-  version would speed up CP5 collection (CP1-A-owned file, change needs the integrator).
-- CP5-C: the CFG hook is `_guided_denoise` in `wm/diffusion/sampler.py`. `action_input`
-  goes on `UNetConfig`; `"adagn+planes"` widens `conv_in`.
 - Human recording on several machines: give each person their own `first_worker` in
   `configs/data/human.yaml` (e.g. Aunonto 0, Syed 100, Michael 200).
 - On macOS, opencv bundles its own `libSDL2` next to pygame's (objc duplicate-class
@@ -247,7 +283,7 @@ to see what already exists.
 | D8 | Store RAM (128 bytes) per step for coverage stats and detector calibration. Never used as model input. Verified map in `wm/data/ram.py` (CP2-A). | Final (CP2-A) |
 | D9 | Ground truth for rollouts comes from deterministic replay (seed, no-op count, actions). Replay reproduces every stored frame, reward, life count and RAM byte exactly (CP2-A test). | Final (CP2-A) |
 | D10 | 84×84, `method="max"`. `area` keeps the laser in only 65.5% of frames at 84 and 96; `max` keeps 100% at both. 96/max keeps more alien shape (84/max turns aliens into blocks) and stays an option if sprite detail matters. | Final (CP1-A) |
-| D11 | Default sampling steps and classifier-free guidance weight. **Steps: Euler N=2** (CP4). Decided on rollout horizon curves, not the one-step PSNR rule (which picked 1 because PSNR falls with steps). N=1 and 2 tie and beat N=3 at every h ≥ 5; N=2 keeps one refinement step and runs at 27 frames/s on M3 MPS (demo), 148 on an L40S. N=10 is best only beyond h≈100 (LPIPS 0.094 vs 0.117 at h=200). CFG weight: CP5-C. | Steps final (CP4); CFG open (CP5-C) |
+| D11 | Default sampling steps and classifier-free guidance weight. **Steps: Euler N=2** (CP4). Decided on rollout horizon curves, not the one-step PSNR rule (which picked 1 because PSNR falls with steps). N=1 and 2 tie and beat N=3 at every h ≥ 5; N=2 keeps one refinement step and runs at 27 frames/s on M3 MPS (demo), 148 on an L40S. N=10 is best only beyond h≈100 (LPIPS 0.094 vs 0.117 at h=200). **CFG weight: `w = 1`** (CP5, no guidance, one forward). On the final model, `w` = 1.5/2/3 leave movement unchanged (Δx within 0.02 px/step, ordering 34 → 35/35/36 of 36) and lower the fire response (0.60 → 0.58/0.55/0.52, real 0.625) at 2× the cost. | Final (steps CP4, CFG CP5) |
 | D12 | Training runs on Dartmouth's Discovery cluster (Slurm), with checkpoint and auto-resume so jobs survive time limits and queue waits | Final |
 | D13 | Track owners: A = Aunonto, B = Syed, C = Michael. Syed takes B because he is the only one with Discovery access (a change from the proposal's split). | Final |
 | D14 | Python 3.13 for the venv (pygame has no 3.14 wheels on macOS), enforced by `setup.sh` | Final |
@@ -259,14 +295,15 @@ to see what already exists.
 | D20 | Model YAMLs hold `UNetConfig` fields except `C, K, H` (from the data); `ch` maps resolution to channel list. At 96 the 4.7 lists give 22.9M (`small`) and 52.8M (`base`), above the targets; targets apply at 84 (D10). | Final (CP3-C) |
 | D21 | The sampler draws its initial noise on the generator's device, then moves it to the model's device; `eval_single_step.py` seeds a CPU generator. The same seed then gives the same samples on CPU, MPS and CUDA (CPU vs MPS agree to 1e-6 relative on all metrics). Earlier evals seeded a generator on the model's device, so CUDA and CPU results differed (PSNR 34.36 vs 33.84). | Final (Milestone 1) |
 | D22 | Context noise augmentation is on for all training from CP5 (`aug_max` 0.7, `n_levels` 10, `shared`); inference uses `ctx_level` 0. CP4: aug beats no-aug by +2.5 dB PSNR at h=20 and h=50 and 22% lower LPIPS at h=200; levels 0-2 at inference are equal within CI. | Final (CP4) |
+| D23 | Final model: `base` U-Net (34.4M), K=4, batch 128, 200k steps on `data/full/` only (no human data: none was recorded, and 1 h is ~1% of `data/full`). Human play is recorded after the run as a test set. `adagn` action input (both CP4 and CP5 models read actions, so `adagn+planes` was not trained). | Final (CP5) |
 
 ### 1.4 Open questions
 
 - Discovery: partition `gpuq`; Python 3.13 via uv (there is no 3.13 module). Time limit 5
   days. GPUs: `nvidia_l40s` (48 GB, 8 per node) and `nvidia_a100_80gb_pcie_3g.40gb` MIG
   slices (4). A 50k-step `small` run takes ~2.4 h on one L40S (~385 samples/s).
-- How much human play to record (target: at least 1 hour total, collected during CP3 to CP5).
-  `play_record.py` exists (CP3-A) but nobody has recorded yet.
+- Human play (target ≥ 1 hour total): not recorded yet; now a CP6 test set, not training
+  data (D23). `play_record.py` exists (CP3-A).
 - Intel Macs: PyTorch has no Intel-Mac wheels that support Python 3.13 (CP1-A used 3.12 +
   torch 2.2.2 + `numpy<2`). Support that setup, or use those machines only with the cluster?
 
@@ -300,6 +337,12 @@ The integrator adds rows at each checkpoint.
 | 2026-11-17 | CP4 | **Sampler benchmark** (`bench_sampling.py`, noaug checkpoint, L40S, batch 1, channels-last fp32; quality on 512 `data/debug/` val windows, teacher-forced). Euler 1/2/3/5/10 steps: 280/148/101/61/31 frames/s, PSNR 36.0/36.0/34.7/32.7/32.2 dB, LPIPS 0.0079/0.0078/0.0073/0.0098/0.0105. Heun 1/2/3/5/10: 277/101/62/35/17 frames/s, PSNR 36.0/**11.2**/26.8/31.6/32.1. Every setting clears 15 frames/s. `propose_d11` → Euler 1 step; not adopted (see D11). Figure: `docs/figures/cp4_sampler_bench.png`. |
 | 2026-11-18 | CP4 | **D11 step sweep** (`eval_rollouts.py`, `debug_aug` checkpoint, ctx_level 0, same 64 `data/eval/` trajectories, T=200, seed 0; L40S; one job per N). Euler N=1/2/3/5/10, PSNR h=20: 26.7/26.6/25.3/24.5/24.5 dB; PSNR h=50: 22.7/22.7/20.7/20.7/21.1; LPIPS h=50: 0.036/0.035/0.046/0.042/0.039; LPIPS h=200: 0.115/0.117/0.137/0.108/0.094; mean over h=1..200 LPIPS 0.065/0.065/0.075/0.065/0.058, SSIM 0.73/0.73/0.55/0.53/0.53. N=3 reproduces the horizon-comparison row exactly. No N makes the model register hits (generated score stays near 0005 while the real one reaches 125-160). D11 steps = 2. Figure: `docs/figures/cp4_d11_steps.png`. |
 | 2026-11-18 | CP4 | Fast suite 288 passed after merging A, B, C (macOS arm64, CPU, Python 3.13.2). |
+| 2026-11-18 | CP5 | `data/full/` (Discovery, 16 CPU workers, ~14 min): 5,000,000 steps, 6,355 episodes (agent ε=0.05 986, ε=0.2 2,261, ε=0.3 1,285, random 1,823), 5,006,355 rows, 7,162 MiB, compression 14.1, validator OK. Coverage: ≤ 6 invaders 12.15% (target 5%), wave transitions 488 (50, D17), game overs 6,291 (200), UFO visible 18.35% (1%), shields ≤ 50% 15.70% (10%). |
+| 2026-11-19 | CP5 | **Final run** `runs/20261118-0501_final` (Discovery `gpuq`, one L40S, `final.yaml`, `base` U-Net 34,352,387 params, batch 128, 200,000 steps): ~42 h at a median 171 samples/s. Val loss (clean context, `data/full` val) 0.0004 at 192k-198k, 0.0005 at 200k. Checkpoints every 10k, last five kept. |
+| 2026-11-20 | CP5 | IDM (`train_idm.py`, `data/debug/` train, 4,000 steps, L40S, 150 s, 1.32M params): real val (26,192 transitions) move 0.824 (majority 0.396), fire 0.641 (majority 0.601). |
+| 2026-11-20 | CP5 | **Controllability** (`eval_counterfactual.py`, 64 branches on `data/eval/`, one per episode, horizon 30, margin 2 px, fire window 3, Euler N=2, `w` = 1, ctx_level 0; L40S). Ordering accuracy (on the 36 branches the real game orders) / Δx per step LEFT, NOOP, RIGHT / fire response (no-fire control) / IDM move, fire. Real emulator 0.562 (36/36) / −0.614, −0.250, +0.267 / 0.625 (0.062) / 0.689, 0.575. Copy-last 0.000 (0/36) / 0, 0, 0 / 0.062 (0.062) / 0.333, 0.500. CP4 aug-on 0.562 (35/36) / −0.370, −0.020, +0.416 / 0.536 (0.062) / 0.675, 0.547. **Final 0.547 (34/36) / −0.383, −0.023, +0.389 / 0.599 (0.062) / 0.681, 0.571.** Both models follow the actions (IDM move 98-99% of the real ceiling). Figure: `docs/figures/cp5_counterfactual.png`. |
+| 2026-11-20 | CP5 | **CFG sweep** (`action_sensitivity.py`, 64 val windows, LEFT vs RIGHT 8-bit MAE in the player band; copy-last 0). `w` = 1/1.5/2/3: CP4 aug 2.02/2.57/3.08/3.88, final 1.97/2.48/2.99/3.75. Counterfactuals on the final model at `w` = 1.5/2/3: ordering 35/35/36 of 36, Δx LEFT −0.388/−0.399/−0.406, RIGHT +0.388/+0.388/+0.408, fire 0.583/0.552/0.521, IDM move 0.679/0.675/0.674, 2× model time. D11 CFG `w` = 1. |
+| 2026-11-20 | CP5 | Fast suite 340 passed after merging C, A, B (305 → 331 → 340); `slow or network or env` 28 passed (macOS arm64, CPU, Python 3.13.2, ale-py 0.12.1). |
 
 ---
 

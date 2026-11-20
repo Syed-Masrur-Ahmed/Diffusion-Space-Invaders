@@ -1,0 +1,18 @@
+# Inverse dynamics model (ROADMAP CP5-A): which action turned f_t into f_{t+1}.
+#   python scripts/train_idm.py --config configs/train/idm.yaml
+# Trains on the train split of dataset_dirs and reports accuracy on the whole val split (real data).
+dataset_dirs: [data/debug]
+val_fraction: 0.05        # same episode split as the world model (4.5)
+seed: 0
+batch_size: 128
+num_workers: 2            # lazy HDF5 loader
+in_memory: false
+steps: 4000
+lr: 1.0e-3
+log_every: 200
+eval_every: 1000          # quick val check on val_batches batches; the final eval uses the whole val split
+val_batches: 20
+model:
+  ch: [32, 64, 64, 128]
+  hidden: 256
+out_dir: runs/idm         # writes idm.pt and metrics.json
