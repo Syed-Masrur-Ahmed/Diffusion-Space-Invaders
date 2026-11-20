@@ -32,7 +32,11 @@ def karras_sigmas(num_steps: int, sigma_min: float, sigma_max: float, rho: float
 
 def _guided_denoise(denoiser: EDMDenoiser, x: Tensor, sigma: float, context: Tensor,
                     actions: torch.LongTensor, ctx_level: torch.LongTensor, cfg_scale: float) -> Tensor:
-    """D(x; sigma), with action CFG D_u + w (D_c - D_u) from one doubled-batch call when w != 1."""
+    """Action CFG. w = 1 is D(x; a) in one forward; otherwise D(x; ∅) + w (D(x; a) - D(x; ∅)).
+
+    w = 0 is the unconditional prediction and still uses the doubled batch. The null half
+    replaces the whole action sequence with NULL_ACTION, the same token action dropout uses.
+    """
     B = x.shape[0]
     if cfg_scale == 1.0:
         return denoiser.denoise(x, x.new_full((B,), sigma), context, actions, ctx_level)
