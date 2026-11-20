@@ -3,6 +3,7 @@
 # python scripts/eval_single_step.py --config configs/eval/single_step.yaml --model runs/<run>/checkpoints/ckpt_last.pt
 model: copy_last        # copy_last | path to a training checkpoint (--model overrides)
 n: 2048                 # val windows, spread evenly over the split (--n overrides)
+min_step: 0             # only windows whose target is at episode step >= min_step (M2 E4 uses 60)
 data:
   dataset_dirs: [data/debug]
   K: 4                  # copy_last only; a checkpoint's own K and C are used otherwise

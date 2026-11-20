@@ -201,3 +201,25 @@ def test_eval_single_step_main_writes_json_and_grid(tmp_path):
     assert result["model"] == "copy_last" and result["split"] == "val" and result["n"] == 12
     assert set(result["metrics"]) == {"psnr", "ssim"}
     assert (out_dir / "grid.png").exists()
+
+
+def test_eval_single_step_min_step_keeps_only_late_windows(tmp_path):
+    import json
+
+    ess = _load_eval_script()
+    data = tmp_path / "data"
+    make_fake_shard(data, 3, [30, 40, 50], 8, 8)
+    ds = WindowDataset([data], K=4, split="val", val_fraction=1.0)
+    idx = ess.eligible_indices(ds, 20)
+    assert len(idx) == (30 - 20) + (40 - 20) + (50 - 20)
+    assert (ds.target_steps()[idx] >= 20).all()
+    assert ess.eligible_indices(ds, 0).tolist() == list(range(len(ds)))
+
+    cfg = tmp_path / "cfg.yaml"
+    cfg.write_text(f"model: copy_last\nn: 16\nmin_step: 0\ndata:\n  dataset_dirs: [{data}]\n  K: 4\n"
+                   f"  grayscale: false\n  val_fraction: 1.0\n  batch_size: 8\n  num_workers: 0\n"
+                   f"metrics: [psnr]\nout_dir: {tmp_path / 'out'}\nseed: 0\nnum_steps: null\ncfg_scale: null\n")
+    out_dir = ess.main(["--config", str(cfg), "--set", "min_step=45", "--set", "n=100"])
+    result = json.loads((out_dir / "metrics.json").read_text())
+    assert result["min_step"] == 45 and result["eligible_windows"] == 5 and result["n"] == 5
+    assert result["val_windows"] == len(ds)
