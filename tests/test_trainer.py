@@ -15,7 +15,7 @@ from tests.fixtures import decode_frame, make_fake_shard
 from wm.data.reader import ShardReader
 from wm.data.schema import NULL_ACTION
 from wm.train.trainer import (CKPT_KEYS, EpochBatchSampler, Trainer, drop_actions, find_auto_resume,
-                              load_run_config, run)
+                              load_run_config, run, shuffle_actions)
 
 REPO = Path(__file__).resolve().parents[1]
 DEBUG_YAML = REPO / "configs/train/debug.yaml"
@@ -224,3 +224,28 @@ def test_sigusr1_saves_and_auto_resume_continues(tmp_path, fake_data):
     assert f"resumed {run_dir} at step {step}" in out.stdout
     assert torch.load(run_dir / "checkpoints/ckpt_last.pt", weights_only=False)["step"] == step + 3
     assert len(list((tmp_path / "runs").iterdir())) == 1  # continued in place
+
+
+def test_shuffle_actions_moves_whole_sequences_between_samples():
+    """The E5 placebo: each sample gets another sample's whole (K,) action sequence."""
+    torch.manual_seed(0)
+    actions = torch.randint(0, 6, (512, K))
+    shuffled = shuffle_actions(actions)
+    assert sorted(map(tuple, shuffled.tolist())) == sorted(map(tuple, actions.tolist()))
+    assert (shuffled != actions).any(1).float().mean() > 0.9
+
+
+def test_trainer_shuffle_actions_only_in_training(tmp_path, fake_data):
+    assert not cfg_for(tmp_path).train.shuffle_actions  # off by default
+    trainer = Trainer(cfg_for(tmp_path, **{"train.p_action_drop": 0.0, "train.shuffle_actions": "true",
+                                           "data.batch_size": 8}), run_dir=None)
+    batch = next(iter(trainer.train_loader))
+    seen = {}
+    hook = trainer.net.register_forward_pre_hook(lambda m, args: seen.update(actions=args[3]))
+    trainer.train_step([batch])
+    trained_on = seen["actions"]
+    trainer.eval_loss(batch)
+    hook.remove()
+    assert sorted(map(tuple, trained_on.tolist())) == sorted(map(tuple, batch["actions"].tolist()))
+    assert not torch.equal(trained_on, batch["actions"])
+    assert torch.equal(seen["actions"], batch["actions"])  # val loss sees the real actions

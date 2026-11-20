@@ -76,6 +76,7 @@ class TrainSection:
     grad_accum: int = 1
     ema_decay: float = 0.999
     p_action_drop: float = 0.1
+    shuffle_actions: bool = False  # placebo control (Milestone 2 E5): train on another sample's actions
     aug_max: float = 0.0  # context noise (4.8); 0 disables it
     ctx_noise_mode: str = "shared"  # shared | per_frame
     compile: bool = False
@@ -123,6 +124,11 @@ def drop_actions(actions: torch.LongTensor, p: float) -> torch.LongTensor:
         return actions
     drop = torch.rand(actions.shape[0]) < p  # global CPU RNG, saved in rng_states
     return torch.where(drop[:, None].to(actions.device), torch.full_like(actions, NULL_ACTION), actions)
+
+
+def shuffle_actions(actions: torch.LongTensor) -> torch.LongTensor:
+    """Give each sample another sample's whole (K,) action sequence (a random permutation of the batch)."""
+    return actions[torch.randperm(actions.shape[0])]  # global CPU RNG, saved in rng_states
 
 
 def context_noise(context: Tensor, n_levels: int, aug_max: float, mode: str) -> tuple[Tensor, torch.LongTensor]:
@@ -325,7 +331,9 @@ class Trainer:
         Without `augment` (val loss, sample grids) the context is clean and ctx_level is 0.
         """
         t = self.cfg.train
-        actions = drop_actions(batch["actions"], t.p_action_drop) if augment else batch["actions"]
+        actions = batch["actions"]
+        if augment:
+            actions = drop_actions(shuffle_actions(actions) if t.shuffle_actions else actions, t.p_action_drop)
         target, context, actions = (x.to(self.device, non_blocking=True)
                                     for x in (batch["target"], batch["context"], actions))
         context, ctx_level = context_noise(context, self.cfg.model.n_levels, t.aug_max if augment else 0.0,

@@ -51,6 +51,7 @@ train:
   grad_accum: 1         # batches per optimizer step
   ema_decay: 0.999      # EMA copies the weights exactly during warmup
   p_action_drop: 0.1
+  shuffle_actions: false # placebo: train on another sample's actions (Milestone 2 E5)
   aug_max: 0.0          # context noise augmentation (4.8); implemented in CP4-B
   ctx_noise_mode: shared  # shared | per_frame (CP4-B)
   compile: false
