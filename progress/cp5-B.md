@@ -55,7 +55,7 @@ Commands (macOS arm64, M3, Python 3.13.2, CPU):
 - **Throughput: median 171 samples/s** (estimate was 150–200; `small` was ~385 in CP4-B).
 - **Val loss (clean context): 0.0004** at steps 192k–198k, 0.0005 at 200k. CP4's debug models were 0.0012–0.0020 at 50k, but on the `data/debug` val split, so the numbers are not directly comparable. The trainer prints 4 decimals, so the curve looks flat at this scale; the rollout eval is the comparison that matters.
 - Kept checkpoints: `ckpt_0160000.pt` … `ckpt_0200000.pt` (every 10k, `keep_last` 5) and `ckpt_last.pt`. Sample grids up to `samples/step_0200000.png`.
-- Rollout check on the final checkpoint (`eval_rollouts.py --n 16`, task 4): *pending*, command under Follow-ups.
+- Rollout check on the final checkpoint (`eval_rollouts.py --n 16`, task 4): not run, see Deviations.
 
 Size and time estimates (before collection):
 - Disk: `data/debug` is 740 MiB for 500,688 rows, ~1.5 GB per million rows (the ROADMAP guessed 4–8 GB). 5M rows ≈ 7.5 GB.
@@ -96,6 +96,7 @@ From the repo root on `cp5/B-fullrun` (or `main` after CP5), venv active. `S=/da
 - **New test file `tests/test_fullrun.py`.** CP5-B's Owns list has no test file, and its two tests (dry run, validator) need real data. The config and chain-script checks are cheap and catch typos before a multi-day job.
 - **Batch 128, 200k steps.** The roadmap says 64–128 and "as many steps as compute allows". 200k is a starting point; adjust from the measured throughput.
 - **`keep_last: 5`.** Each `base` checkpoint is ~0.55 GB, so 5 keep 50k steps of history in ~2.75 GB under `runs/`.
+- **No `eval_rollouts.py --n 16` checks (task 4).** Task 4 is monitoring, to catch a bad run early; the run finished cleanly (val loss flat, sample grids to 200k), so a 1 h GPU job on the final checkpoint would only preview CP6, whose eval runs the horizon curves (final vs debug aug-on vs copy-last) and counterfactuals on this checkpoint. Decision (Syed, 2026-11-20): skip it.
 - **`coverage_report.py --out-dir runs/coverage_full`**, since the script names its outputs `cp2_coverage_*` and the default dir would overwrite the CP2 figures.
 
 ## Interface change requests
@@ -103,14 +104,6 @@ None.
 
 ## Follow-ups
 - The chain does not wait for CP5-C: the CP4 aug model tracks the real ship to < 0.3 px over 20 steps (Results), so an `action_input` change is unlikely. If CP5-C still adds `action_input: adagn+planes`, `final.yaml` needs that key and the run restarts.
-- The missed hits (score never increases in rollouts) are the thing to watch in the intermediate `eval_rollouts.py --n 16` checks; more kills in `data/full` and the larger model are the expected fix.
+- The missed hits (score never increases in rollouts) are the thing to check in CP6's rollout eval of the final checkpoint; more kills in `data/full` and the larger model are the expected fix.
 - Human play after the final run: Aunonto and Michael record (≥ 1 h total, games ≥ 236 steps for the T=200 rollout eval), copy to `$S/human/`, `validate_data.py`, then the human-play rollout eval.
-- **Rollout check on the final checkpoint** (with copy-last and the CP4 aug model for reference), then record the table here and whether the score now increases on hits:
-  ```bash
-  R=runs/20261118-0501_final; S=/dartfs-hpc/scratch/f0079km/wm/data
-  CMD="python scripts/eval_rollouts.py --config configs/eval/rollouts.yaml \
-    --models copy_last runs/20261117-0431_debug_aug/checkpoints/ckpt_last.pt $R/checkpoints/ckpt_last.pt \
-    --n 16 --set 'dataset_dirs=[$S/eval]' --set out_dir=runs/eval_rollouts/final_done" \
-    sbatch -p gpuq --gres=gpu:nvidia_l40s:1 -t 01:00:00 scripts/slurm/eval.sbatch
-  ```
 - `$S/human/` is free to fill now that the chain has finished.
