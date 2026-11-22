@@ -9,6 +9,8 @@
 #   DATA_ROOT=<scratch>/data bash scripts/slurm/m2_runs.sh posteval        # E5-E8 evals of every finished training run
 #   DATA_ROOT=<scratch>/data bash scripts/slurm/m2_runs.sh e9              # E9 error analysis (events, memorization)
 #   DATA_ROOT=<scratch>/data bash scripts/slurm/m2_runs.sh test            # section 5: the one-time data/test evaluation
+#   DATA_ROOT=<scratch>/data bash scripts/slurm/m2_runs.sh m1test          # section 5: the M1 model on data/test
+#   DATA_ROOT=<scratch>/data bash scripts/slurm/m2_runs.sh curves          # learning curves from TensorBoard (login node)
 #
 # posteval evaluates each run's ckpt_0050000.pt (the step file the trainer writes at train.steps; ckpt_last.pt
 # also exists after a time-limit stop) and skips unfinished runs and evals whose metrics.json already exists,
@@ -201,6 +203,25 @@ test_jobs() {  # every test eval writes under results/milestone2/test/; data/tes
 --set out_dir=results/milestone2/test/counterfactual"
 }
 
+m1_test_jobs() {  # the M1 checkpoint gets the same three test evals; its counterfactuals go to their own dir
+  [ "$DRY_RUN" = 1 ] || mkdir -p runs
+  single_step "$M1_CKPT" results/milestone2/test/single_step --set "'data.dataset_dirs=[$DATA_ROOT/test]'" \
+    --set data.val_fraction=1.0
+  rollouts "$M1_CKPT" results/milestone2/test/rollouts/m1 --set "'dataset_dirs=[$DATA_ROOT/test]'" --set n_videos=0
+  gpu_eval "python scripts/eval_counterfactual.py --config configs/eval/counterfactual.yaml \
+--models $M1_CKPT --set 'dataset_dirs=[$DATA_ROOT/test]' --set idm=$IDM_CKPT \
+--set out_dir=results/milestone2/test/counterfactual_m1"
+}
+
+curves() {  # train and val loss of every finished run, the M1 run and the final run (no job: reads tb/ only)
+  local name pairs=()
+  for name in "${RUNS[@]}"; do
+    pairs+=("$name=$(dirname "$(dirname "$(need_ckpt "$name")")")")
+  done
+  pairs+=("m1=$(dirname "$(dirname "$M1_CKPT")")" "final=$(dirname "$(dirname "$FINAL_CKPT")")")
+  run python scripts/m2_curves.py --runs "${pairs[@]}" --out results/milestone2/curves
+}
+
 case "${1:-}" in
   data) data_jobs ;;
   subsets) subsets ;;
@@ -209,6 +230,8 @@ case "${1:-}" in
   posteval) post_eval_jobs ;;
   e9) e9_jobs ;;
   test) test_jobs ;;
+  m1test) m1_test_jobs ;;
+  curves) curves ;;
   all) data_jobs; subsets; train_jobs; eval_jobs ;;
-  *) echo "usage: $0 data|subsets|train|eval|posteval|e9|test|all" >&2; exit 2 ;;
+  *) echo "usage: $0 data|subsets|train|eval|posteval|e9|test|m1test|curves|all" >&2; exit 2 ;;
 esac
