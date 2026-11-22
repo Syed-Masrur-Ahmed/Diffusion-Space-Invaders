@@ -1,0 +1,403 @@
+{
+  "detectors": {
+    "hits": {
+      "ram_events": 1286,
+      "recall": 0.807153965785381,
+      "detected": 1318,
+      "precision": 0.9377845220030349
+    },
+    "deaths": {
+      "ram_events": 105,
+      "recall": 1.0,
+      "detected": 105,
+      "precision": 1.0
+    },
+    "alien_count_vs_ram_corr": 0.9700302849920284
+  },
+  "trajectories": [
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      0
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      2
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      3
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      5
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      6
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      8
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      9
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      11
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      13
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      14
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      16
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      17
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      19
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      20
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      22
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      24
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      25
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      27
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      28
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      30
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      31
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      33
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      0
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      1
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      3
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      4
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      6
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      7
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      9
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      11
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      12
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      14
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      15
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      17
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      18
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      20
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      22
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      23
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      25
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      26
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      28
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      29
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      31
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      33
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      34
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w002_00000.h5",
+      1
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w002_00000.h5",
+      2
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w002_00000.h5",
+      4
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w002_00000.h5",
+      5
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w002_00000.h5",
+      7
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w002_00000.h5",
+      9
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w002_00000.h5",
+      10
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w002_00000.h5",
+      12
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w002_00000.h5",
+      13
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w003_00000.h5",
+      0
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w003_00000.h5",
+      1
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w003_00000.h5",
+      3
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w003_00000.h5",
+      5
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w003_00000.h5",
+      6
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w003_00000.h5",
+      8
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w003_00000.h5",
+      9
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w003_00000.h5",
+      11
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w003_00000.h5",
+      12
+    ],
+    [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w003_00000.h5",
+      14
+    ]
+  ],
+  "T": 200,
+  "match_window": 2,
+  "models": {
+    "copy_last": {
+      "hits": {
+        "real": 494,
+        "generated": 0,
+        "recall": 0.0,
+        "false_per_100_steps": 0.0
+      },
+      "deaths": {
+        "real": 37,
+        "generated": 0,
+        "recall": 0.0,
+        "false_per_100_steps": 0.0
+      },
+      "alien_abs_error": {
+        "1": 0.3683035714285722,
+        "5": 1.019345238095238,
+        "20": 1.1413690476190461,
+        "50": 1.3355654761904767,
+        "100": 2.2886904761904763,
+        "200": 5.756696428571429
+      },
+      "player_x_abs_error": {
+        "1": 0.6545568885448916,
+        "5": 2.99047020123839,
+        "20": 6.927147048723336,
+        "50": 8.074860060983458,
+        "100": 16.399142844272212,
+        "200": 23.77987793557969
+      },
+      "player_missing_when_real_visible": 0.0
+    },
+    "20261120-1753_m2_r0_ckpt_0050000": {
+      "hits": {
+        "real": 494,
+        "generated": 1092,
+        "recall": 0.3360323886639676,
+        "false_per_100_steps": 6.7578125
+      },
+      "deaths": {
+        "real": 37,
+        "generated": 3,
+        "recall": 0.0,
+        "false_per_100_steps": 0.0234375
+      },
+      "alien_abs_error": {
+        "1": 1.2180059523809528,
+        "5": 2.463541666666667,
+        "20": 2.6205357142857144,
+        "50": 4.129464285714285,
+        "100": 5.544642857142858,
+        "200": 9.619791666666666
+      },
+      "player_x_abs_error": {
+        "1": 0.0018382352941176405,
+        "5": 0.050409370162538714,
+        "20": 0.15420014792354192,
+        "50": 0.5528739956021396,
+        "100": 2.311247091235606,
+        "200": 8.618300263909118
+      },
+      "player_missing_when_real_visible": 0.005
+    },
+    "20261121-0120_m2_x1_aug_ckpt_0050000": {
+      "hits": {
+        "real": 494,
+        "generated": 4,
+        "recall": 0.004048582995951417,
+        "false_per_100_steps": 0.015625
+      },
+      "deaths": {
+        "real": 37,
+        "generated": 1,
+        "recall": 0.0,
+        "false_per_100_steps": 0.0078125
+      },
+      "alien_abs_error": {
+        "1": 0.7113095238095242,
+        "5": 1.6324404761904765,
+        "20": 1.8191964285714282,
+        "50": 1.651785714285714,
+        "100": 2.2202380952380953,
+        "200": 3.1614583333333335
+      },
+      "player_x_abs_error": {
+        "1": 0.017608359133126916,
+        "5": 0.12082358088731454,
+        "20": 0.19267724791924196,
+        "50": 0.7651240883217886,
+        "100": 2.26158244974403,
+        "200": 9.98173060647261
+      },
+      "player_missing_when_real_visible": 0.000234375
+    },
+    "20261118-0501_final_ckpt_last": {
+      "hits": {
+        "real": 494,
+        "generated": 440,
+        "recall": 0.4473684210526316,
+        "false_per_100_steps": 1.65625
+      },
+      "deaths": {
+        "real": 37,
+        "generated": 21,
+        "recall": 0.05405405405405406,
+        "false_per_100_steps": 0.1484375
+      },
+      "alien_abs_error": {
+        "1": 0.2574404761904764,
+        "5": 0.465029761904762,
+        "20": 1.505208333333333,
+        "50": 1.6964285714285714,
+        "100": 1.799107142857143,
+        "200": 3.224702380952381
+      },
+      "player_x_abs_error": {
+        "1": 0.0,
+        "5": 0.014878216911764719,
+        "20": 0.11558876038607085,
+        "50": 0.9039678972890797,
+        "100": 5.32266231053825,
+        "200": 14.578147247202976
+      },
+      "player_missing_when_real_visible": 0.010234375
+    }
+  }
+}
