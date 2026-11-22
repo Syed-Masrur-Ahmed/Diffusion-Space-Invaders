@@ -60,9 +60,9 @@ to see what already exists.
 | CP5 | A: Controllability evaluation and inverse dynamics | `cp5/A-control` | Aunonto | DONE |
 | CP5 | B: Full dataset and final training run | `cp5/B-fullrun` | Syed | DONE |
 | CP5 | C: Action conditioning and classifier-free guidance | `cp5/C-cfg` | Michael | DONE |
-| CP6 | A: Final evaluation and figures | `cp6/A-final-eval` | Aunonto | TODO |
+| CP6 | A: Final evaluation and figures | `cp6/A-final-eval` | Aunonto | TODO (part done in Milestone 2) |
 | CP6 | B: Playable demo | `cp6/B-demo` | Syed | TODO |
-| CP6 | C: Ablations | `cp6/C-ablations` | Michael | TODO |
+| CP6 | C: Ablations | `cp6/C-ablations` | Michael | TODO (part done in Milestone 2) |
 | CP7 | Stretch: agent trained inside the world model | `cp7/*` | any | TODO |
 
 ### 1.2 Done so far
@@ -242,6 +242,37 @@ to see what already exists.
 - The RAM player-laser byte (85, idle 246) lives in `wm/eval/counterfactual.py`; moving it
   into `wm/data/ram.py` is a small follow-up for its owner.
 - `base` trains at ~171 samples/s on one L40S (200k steps × batch 128 ≈ 42 h).
+
+**Milestone 2 (merged 2026-11-22, tag `milestone2`; `notebooks/milestone2.ipynb`, results in `results/milestone2/`):**
+
+Course milestone, run between CP5 and CP6. Every run is `configs/train/debug.yaml` (small, 50k steps, batch 64)
+on `data/full` with one change; jobs in `scripts/slurm/m2_runs.sh`.
+
+- **New test split:** `data/test` (`configs/data/test.yaml`, 100 episodes, seeds from 1.5e9), evaluated once in
+  Milestone 2. `data/eval` is now treated as validation. Single-step evals use targets at step >= 60
+  (`min_step`), because 5-10% of early-game windows are byte-identical to train windows.
+- **Results (data/eval unless noted):** seed noise (3 R0 seeds) sets the smallest meaningful difference: 0.66 dB
+  single-step PSNR, 1.07 dB rollout PSNR at h50, 6 ordered branches. Data size has no effect from 12.5% to 100%
+  at 50k steps. Context noise (X1) is the only one-change gain (+6.7 dB rollout PSNR at h50); 3 sampler steps,
+  `sigma_data` 0.93 and `base` width give nothing or worse. Shuffled actions (placebo) give 0/36 ordered branches.
+- **Test set:** final model +5.7 dB single-step over copy-last and best up to h50; X1 better from h100. Both order
+  41/41 branches.
+- **E9 (failure analysis, `scripts/m2_errors.py`):** the final model reproduces 45% of real hits (16% by chance)
+  and 2 of 37 life losses. No memorization: generated frames are no closer to the 4.7M training frames than real
+  held-out frames are.
+- New code outside the milestone scripts: `train.shuffle_actions` (placebo), `WindowDataset.target_steps()`,
+  `min_step` in `eval_single_step.py`. All default off.
+
+**What this covers for CP6:**
+
+- CP6-A task 1: single-step, horizon curves (final, X1, R0, copy-last), counterfactuals and IDM are done on
+  `data/eval` and `data/test`. Still missing: the speed table, and N=10 on the final model.
+- CP6-A task 2: E9 gives missed-hit and missed-death examples, alien-count error per horizon and the
+  memorization check. Still missing: a gallery of drift, vanished aliens and laser errors.
+- CP6-A task 3: the numbers are in the notebook; `docs/results.md` is still to write.
+- The CP5 carry-over "check hits and life losses on the final model" is answered by E9 (above).
+- CP6-C: X1 covers context noise on/off at `data/full` scale. X2 tried 3 steps on R0 only; the {1, 2, 3, 5, 10}
+  sweep on the final model, `shared` vs `per_frame`, K and CFG `w` are still to do.
 
 **Still open from CP3:**
 
@@ -1252,6 +1283,8 @@ Tests:
 ---
 
 ### CP6: Demo, ablations, final evaluation
+
+Milestone 2 already did part of CP6-A and CP6-C; see 1.2 before starting.
 
 #### CP6-A: Final evaluation and figures
 **Branch:** `cp6/A-final-eval` · **Owns:** `docs/results.md`, `docs/figures/final_*`, `configs/eval/final.yaml`
