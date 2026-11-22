@@ -1,0 +1,886 @@
+{
+  "config": {
+    "models": [
+      "copy_last"
+    ],
+    "dataset_dirs": [
+      "/dartfs-hpc/scratch/f0079km/wm/data/eval"
+    ],
+    "n": 64,
+    "horizon": 30,
+    "min_step": 32,
+    "branch_seed": 0,
+    "margin_px": 2.0,
+    "fire_window": 3,
+    "K": 4,
+    "grayscale": false,
+    "ctx_levels": [
+      0
+    ],
+    "num_steps": null,
+    "cfg_scale": null,
+    "seed": 0,
+    "batch_size": 32,
+    "idm": "runs/idm/idm.pt",
+    "calibrate": true,
+    "strip_branches": 3,
+    "strip_steps": [
+      0,
+      5,
+      10,
+      20,
+      30
+    ],
+    "out_dir": "results/milestone2/counterfactual"
+  },
+  "programs": [
+    "NOOP",
+    "LEFT",
+    "RIGHT",
+    "FIRE",
+    "LEFTFIRE",
+    "RIGHTFIRE"
+  ],
+  "device": "cuda",
+  "calibration": {
+    "slope": 0.5251183358799106,
+    "intercept": 0.7697466572055992,
+    "mae_px": 0.2781479390191308,
+    "max_err_px": 42.74584842910279,
+    "n": 37924,
+    "n_no_player": 1936
+  },
+  "branches": [
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      "episode": 0,
+      "t": 136,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      "episode": 2,
+      "t": 304,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      "episode": 3,
+      "t": 112,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      "episode": 5,
+      "t": 110,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      "episode": 6,
+      "t": 137,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      "episode": 8,
+      "t": 336,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      "episode": 9,
+      "t": 36,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      "episode": 11,
+      "t": 267,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      "episode": 13,
+      "t": 330,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      "episode": 14,
+      "t": 48,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      "episode": 16,
+      "t": 370,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      "episode": 17,
+      "t": 286,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      "episode": 19,
+      "t": 141,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      "episode": 20,
+      "t": 247,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      "episode": 22,
+      "t": 270,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      "episode": 24,
+      "t": 233,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      "episode": 25,
+      "t": 164,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      "episode": 27,
+      "t": 144,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      "episode": 28,
+      "t": 356,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      "episode": 30,
+      "t": 46,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      "episode": 31,
+      "t": 48,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w000_00000.h5",
+      "episode": 33,
+      "t": 138,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      "episode": 0,
+      "t": 297,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      "episode": 1,
+      "t": 103,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      "episode": 3,
+      "t": 336,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      "episode": 4,
+      "t": 164,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      "episode": 6,
+      "t": 294,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      "episode": 7,
+      "t": 190,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      "episode": 9,
+      "t": 129,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      "episode": 11,
+      "t": 131,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      "episode": 12,
+      "t": 68,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      "episode": 14,
+      "t": 231,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      "episode": 15,
+      "t": 269,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      "episode": 17,
+      "t": 127,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      "episode": 18,
+      "t": 138,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      "episode": 20,
+      "t": 79,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      "episode": 22,
+      "t": 35,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      "episode": 23,
+      "t": 308,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      "episode": 25,
+      "t": 36,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      "episode": 26,
+      "t": 69,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      "episode": 28,
+      "t": 359,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      "episode": 29,
+      "t": 167,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      "episode": 31,
+      "t": 313,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      "episode": 33,
+      "t": 117,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w001_00000.h5",
+      "episode": 34,
+      "t": 122,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w002_00000.h5",
+      "episode": 1,
+      "t": 213,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w002_00000.h5",
+      "episode": 2,
+      "t": 142,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w002_00000.h5",
+      "episode": 4,
+      "t": 178,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w002_00000.h5",
+      "episode": 5,
+      "t": 99,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w002_00000.h5",
+      "episode": 7,
+      "t": 325,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w002_00000.h5",
+      "episode": 9,
+      "t": 247,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w002_00000.h5",
+      "episode": 10,
+      "t": 144,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w002_00000.h5",
+      "episode": 12,
+      "t": 105,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w002_00000.h5",
+      "episode": 13,
+      "t": 125,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w003_00000.h5",
+      "episode": 0,
+      "t": 35,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w003_00000.h5",
+      "episode": 1,
+      "t": 172,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w003_00000.h5",
+      "episode": 3,
+      "t": 71,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w003_00000.h5",
+      "episode": 5,
+      "t": 297,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w003_00000.h5",
+      "episode": 6,
+      "t": 115,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w003_00000.h5",
+      "episode": 8,
+      "t": 140,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w003_00000.h5",
+      "episode": 9,
+      "t": 246,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w003_00000.h5",
+      "episode": 11,
+      "t": 276,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w003_00000.h5",
+      "episode": 12,
+      "t": 169,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/eval/shard_w003_00000.h5",
+      "episode": 14,
+      "t": 70,
+      "laser_idle": true
+    }
+  ],
+  "results": {
+    "real": {
+      "ordering_accuracy": 0.5625,
+      "dx_per_step": {
+        "NOOP": -0.25026501890855485,
+        "LEFT": -0.614133982222359,
+        "RIGHT": 0.267161354198349,
+        "FIRE": -0.2502577213829633,
+        "LEFTFIRE": -0.614133982222359,
+        "RIGHTFIRE": 0.26598280381532013
+      },
+      "fire_response": {
+        "p": 0.625,
+        "n": 192
+      },
+      "no_fire_response": {
+        "p": 0.0625,
+        "n": 192
+      },
+      "player_missing": 0.07395833333333333,
+      "ended": 0,
+      "seconds": 19.586044385912828,
+      "idm": {
+        "move": 0.6890625,
+        "fire": 0.5748263888888889,
+        "n": 11520
+      }
+    },
+    "copy_last": {
+      "model": "copy_last",
+      "ctx_level": 0,
+      "ordering_accuracy": 0.0,
+      "ordering_accuracy_real_ordered": 0.0,
+      "n_real_ordered": 36,
+      "dx_per_step": {
+        "NOOP": 0.0,
+        "LEFT": 0.0,
+        "RIGHT": 0.0,
+        "FIRE": 0.0,
+        "LEFTFIRE": 0.0,
+        "RIGHTFIRE": 0.0
+      },
+      "fire_response": {
+        "p": 0.0625,
+        "n": 192
+      },
+      "no_fire_response": {
+        "p": 0.0625,
+        "n": 192
+      },
+      "player_missing": 0.0,
+      "final_x_error_px": {
+        "NOOP": 7.236514933062134,
+        "LEFT": 17.493998205883603,
+        "RIGHT": 18.56450632438524,
+        "FIRE": 7.236724829688045,
+        "LEFTFIRE": 17.493998205883603,
+        "RIGHTFIRE": 18.530608019300495
+      },
+      "idm": {
+        "move": 0.3333333333333333,
+        "fire": 0.5,
+        "n": 11520
+      },
+      "seconds": 1.7444809810258448
+    },
+    "20261120-1753_m2_r0_ckpt_0050000@ctx0": {
+      "model": "runs/20261120-1753_m2_r0/checkpoints/ckpt_0050000.pt",
+      "ctx_level": 0,
+      "ordering_accuracy": 0.5,
+      "ordering_accuracy_real_ordered": 0.8055555555555556,
+      "n_real_ordered": 36,
+      "dx_per_step": {
+        "NOOP": -0.04432990985591588,
+        "LEFT": -0.4240959786603677,
+        "RIGHT": 0.3912883662411336,
+        "FIRE": -0.06472209261748484,
+        "LEFTFIRE": -0.40966315871894343,
+        "RIGHTFIRE": 0.4288994595725632
+      },
+      "fire_response": {
+        "p": 0.4895833333333333,
+        "n": 192
+      },
+      "no_fire_response": {
+        "p": 0.0625,
+        "n": 192
+      },
+      "player_missing": 0.029253472222222222,
+      "final_x_error_px": {
+        "NOOP": 6.449255895098846,
+        "LEFT": 6.916781575406197,
+        "RIGHT": 5.969045636028835,
+        "FIRE": 6.985396146043252,
+        "LEFTFIRE": 7.597568465114125,
+        "RIGHTFIRE": 5.718238737813041
+      },
+      "idm": {
+        "move": 0.6828125,
+        "fire": 0.5680555555555555,
+        "n": 11520
+      },
+      "seconds": 21.15846612805035
+    },
+    "20261120-1808_m2_placebo_ckpt_0050000@ctx0": {
+      "model": "runs/20261120-1808_m2_placebo/checkpoints/ckpt_0050000.pt",
+      "ctx_level": 0,
+      "ordering_accuracy": 0.0,
+      "ordering_accuracy_real_ordered": 0.0,
+      "n_real_ordered": 36,
+      "dx_per_step": {
+        "NOOP": -0.007742413989342086,
+        "LEFT": 0.029437121338627564,
+        "RIGHT": 0.0408493459164698,
+        "FIRE": 0.008335307136724786,
+        "LEFTFIRE": 0.02620096271084305,
+        "RIGHTFIRE": 0.038981875224901937
+      },
+      "fire_response": {
+        "p": 0.15625,
+        "n": 192
+      },
+      "no_fire_response": {
+        "p": 0.15625,
+        "n": 192
+      },
+      "player_missing": 0.025868055555555554,
+      "final_x_error_px": {
+        "NOOP": 9.32778005101616,
+        "LEFT": 18.75843374665275,
+        "RIGHT": 17.586993374502914,
+        "FIRE": 9.390346500269361,
+        "LEFTFIRE": 18.409910597555196,
+        "RIGHTFIRE": 17.802294479414815
+      },
+      "idm": {
+        "move": 0.33151041666666664,
+        "fire": 0.4990451388888889,
+        "n": 11520
+      },
+      "seconds": 21.164678722969256
+    },
+    "20261120-2017_m2_r0_seed1_ckpt_0050000@ctx0": {
+      "model": "runs/20261120-2017_m2_r0_seed1/checkpoints/ckpt_0050000.pt",
+      "ctx_level": 0,
+      "ordering_accuracy": 0.546875,
+      "ordering_accuracy_real_ordered": 0.9444444444444444,
+      "n_real_ordered": 36,
+      "dx_per_step": {
+        "NOOP": -0.01819365831049054,
+        "LEFT": -0.3885843514601793,
+        "RIGHT": 0.4463588989892375,
+        "FIRE": -0.012216367271373435,
+        "LEFTFIRE": -0.4175244097119579,
+        "RIGHTFIRE": 0.420939836284607
+      },
+      "fire_response": {
+        "p": 0.5989583333333334,
+        "n": 192
+      },
+      "no_fire_response": {
+        "p": 0.0625,
+        "n": 192
+      },
+      "player_missing": 0.028559027777777777,
+      "final_x_error_px": {
+        "NOOP": 6.845924352802221,
+        "LEFT": 6.616078955715586,
+        "RIGHT": 5.792501732280514,
+        "FIRE": 6.4246748755140475,
+        "LEFTFIRE": 6.654436643078284,
+        "RIGHTFIRE": 5.588720991595518
+      },
+      "idm": {
+        "move": 0.6953993055555555,
+        "fire": 0.5716145833333334,
+        "n": 11520
+      },
+      "seconds": 21.210908367997035
+    },
+    "20261120-2032_m2_r0_seed2_ckpt_0050000@ctx0": {
+      "model": "runs/20261120-2032_m2_r0_seed2/checkpoints/ckpt_0050000.pt",
+      "ctx_level": 0,
+      "ordering_accuracy": 0.578125,
+      "ordering_accuracy_real_ordered": 0.9722222222222222,
+      "n_real_ordered": 36,
+      "dx_per_step": {
+        "NOOP": -0.025500280264097758,
+        "LEFT": -0.34875336430716286,
+        "RIGHT": 0.4143532152221251,
+        "FIRE": -0.0011124388287777666,
+        "LEFTFIRE": -0.36794223644125346,
+        "RIGHTFIRE": 0.40613695647108194
+      },
+      "fire_response": {
+        "p": 0.5572916666666666,
+        "n": 192
+      },
+      "no_fire_response": {
+        "p": 0.0625,
+        "n": 192
+      },
+      "player_missing": 0.0019097222222222222,
+      "final_x_error_px": {
+        "NOOP": 7.3497218473922885,
+        "LEFT": 7.820373596212198,
+        "RIGHT": 5.554840942540344,
+        "FIRE": 7.130180219575191,
+        "LEFTFIRE": 8.021492789801021,
+        "RIGHTFIRE": 5.70669479225447
+      },
+      "idm": {
+        "move": 0.6885416666666667,
+        "fire": 0.5646701388888888,
+        "n": 11520
+      },
+      "seconds": 21.234943925053813
+    },
+    "20261120-2241_m2_data_p12_ckpt_0050000@ctx0": {
+      "model": "runs/20261120-2241_m2_data_p12/checkpoints/ckpt_0050000.pt",
+      "ctx_level": 0,
+      "ordering_accuracy": 0.5625,
+      "ordering_accuracy_real_ordered": 0.9722222222222222,
+      "n_real_ordered": 36,
+      "dx_per_step": {
+        "NOOP": -0.0011488891811901332,
+        "LEFT": -0.3820836495990921,
+        "RIGHT": 0.46380615453044327,
+        "FIRE": 0.009081313710570691,
+        "LEFTFIRE": -0.3644190177599412,
+        "RIGHTFIRE": 0.4454398648738451
+      },
+      "fire_response": {
+        "p": 0.5677083333333334,
+        "n": 192
+      },
+      "no_fire_response": {
+        "p": 0.0625,
+        "n": 192
+      },
+      "player_missing": 0.0125,
+      "final_x_error_px": {
+        "NOOP": 6.634226950244549,
+        "LEFT": 7.780209408324732,
+        "RIGHT": 6.940595246424469,
+        "FIRE": 6.440761716521281,
+        "LEFTFIRE": 8.005502473221593,
+        "RIGHTFIRE": 6.649424302388831
+      },
+      "idm": {
+        "move": 0.7019097222222223,
+        "fire": 0.5688368055555556,
+        "n": 11520
+      },
+      "seconds": 21.272662293049507
+    },
+    "20261120-2256_m2_data_p25_ckpt_0050000@ctx0": {
+      "model": "runs/20261120-2256_m2_data_p25/checkpoints/ckpt_0050000.pt",
+      "ctx_level": 0,
+      "ordering_accuracy": 0.5625,
+      "ordering_accuracy_real_ordered": 1.0,
+      "n_real_ordered": 36,
+      "dx_per_step": {
+        "NOOP": -3.904140350819036e-05,
+        "LEFT": -0.35337032455526074,
+        "RIGHT": 0.45931103661358746,
+        "FIRE": 0.0026906556771972346,
+        "LEFTFIRE": -0.35342057543238903,
+        "RIGHTFIRE": 0.43494586165280097
+      },
+      "fire_response": {
+        "p": 0.46875,
+        "n": 192
+      },
+      "no_fire_response": {
+        "p": 0.0625,
+        "n": 192
+      },
+      "player_missing": 0.0026041666666666665,
+      "final_x_error_px": {
+        "NOOP": 7.067122506378694,
+        "LEFT": 7.7632911207896775,
+        "RIGHT": 6.937937190933464,
+        "FIRE": 7.1671517602173,
+        "LEFTFIRE": 7.634164264616917,
+        "RIGHTFIRE": 6.248563086002701
+      },
+      "idm": {
+        "move": 0.6972222222222222,
+        "fire": 0.57109375,
+        "n": 11520
+      },
+      "seconds": 21.261382500990294
+    },
+    "20261121-0105_m2_data_p50_ckpt_0050000@ctx0": {
+      "model": "runs/20261121-0105_m2_data_p50/checkpoints/ckpt_0050000.pt",
+      "ctx_level": 0,
+      "ordering_accuracy": 0.578125,
+      "ordering_accuracy_real_ordered": 1.0,
+      "n_real_ordered": 36,
+      "dx_per_step": {
+        "NOOP": -0.01635259244834933,
+        "LEFT": -0.40227014129751626,
+        "RIGHT": 0.47908368478830354,
+        "FIRE": -0.0007304408859984253,
+        "LEFTFIRE": -0.37441029111275953,
+        "RIGHTFIRE": 0.4848653051758132
+      },
+      "fire_response": {
+        "p": 0.53125,
+        "n": 192
+      },
+      "no_fire_response": {
+        "p": 0.0625,
+        "n": 192
+      },
+      "player_missing": 0.009548611111111112,
+      "final_x_error_px": {
+        "NOOP": 7.0215159693251135,
+        "LEFT": 6.989939829633905,
+        "RIGHT": 6.57120367999462,
+        "FIRE": 7.356625824577,
+        "LEFTFIRE": 6.866309856565682,
+        "RIGHTFIRE": 6.394789702584635
+      },
+      "idm": {
+        "move": 0.7108506944444445,
+        "fire": 0.5805555555555556,
+        "n": 11520
+      },
+      "seconds": 21.29243409493938
+    },
+    "20261121-0120_m2_x1_aug_ckpt_0050000@ctx0": {
+      "model": "runs/20261121-0120_m2_x1_aug/checkpoints/ckpt_0050000.pt",
+      "ctx_level": 0,
+      "ordering_accuracy": 0.5625,
+      "ordering_accuracy_real_ordered": 0.9722222222222222,
+      "n_real_ordered": 36,
+      "dx_per_step": {
+        "NOOP": -0.006976661883279088,
+        "LEFT": -0.352405277900634,
+        "RIGHT": 0.4392372014595312,
+        "FIRE": 0.002423372309450091,
+        "LEFTFIRE": -0.36016295333923043,
+        "RIGHTFIRE": 0.4279149613885584
+      },
+      "fire_response": {
+        "p": 0.546875,
+        "n": 192
+      },
+      "no_fire_response": {
+        "p": 0.0625,
+        "n": 192
+      },
+      "player_missing": 0.0009548611111111111,
+      "final_x_error_px": {
+        "NOOP": 7.255451494626076,
+        "LEFT": 8.16765667908555,
+        "RIGHT": 6.319148600564223,
+        "FIRE": 7.132608273758508,
+        "LEFTFIRE": 8.420109845900894,
+        "RIGHTFIRE": 6.043838202250046
+      },
+      "idm": {
+        "move": 0.6970486111111112,
+        "fire": 0.5619791666666667,
+        "n": 11520
+      },
+      "seconds": 21.28825088997837
+    },
+    "20261121-0328_m2_x3_sigma093_ckpt_0050000@ctx0": {
+      "model": "runs/20261121-0328_m2_x3_sigma093/checkpoints/ckpt_0050000.pt",
+      "ctx_level": 0,
+      "ordering_accuracy": 0.53125,
+      "ordering_accuracy_real_ordered": 0.9166666666666666,
+      "n_real_ordered": 36,
+      "dx_per_step": {
+        "NOOP": -0.00581760822913381,
+        "LEFT": -0.3685181833191761,
+        "RIGHT": 0.4080294766792445,
+        "FIRE": 0.0014916083796191971,
+        "LEFTFIRE": -0.3518343609693846,
+        "RIGHTFIRE": 0.4403286705081107
+      },
+      "fire_response": {
+        "p": 0.5260416666666666,
+        "n": 192
+      },
+      "no_fire_response": {
+        "p": 0.0625,
+        "n": 192
+      },
+      "player_missing": 0.01597222222222222,
+      "final_x_error_px": {
+        "NOOP": 6.872782758438303,
+        "LEFT": 7.400533788833137,
+        "RIGHT": 6.1195720777346025,
+        "FIRE": 6.829652967799805,
+        "LEFTFIRE": 7.369019986823157,
+        "RIGHTFIRE": 6.455063527411581
+      },
+      "idm": {
+        "move": 0.6943576388888889,
+        "fire": 0.56328125,
+        "n": 11520
+      },
+      "seconds": 21.321287948987447
+    },
+    "20261121-0348_m2_x4_base_ckpt_0050000@ctx0": {
+      "model": "runs/20261121-0348_m2_x4_base/checkpoints/ckpt_0050000.pt",
+      "ctx_level": 0,
+      "ordering_accuracy": 0.453125,
+      "ordering_accuracy_real_ordered": 0.7777777777777778,
+      "n_real_ordered": 36,
+      "dx_per_step": {
+        "NOOP": -0.020040046241374957,
+        "LEFT": -0.3865929379117538,
+        "RIGHT": 0.43466253997733423,
+        "FIRE": -0.004317833386944077,
+        "LEFTFIRE": -0.38629972015113895,
+        "RIGHTFIRE": 0.44027768516509225
+      },
+      "fire_response": {
+        "p": 0.5520833333333334,
+        "n": 192
+      },
+      "no_fire_response": {
+        "p": 0.0625,
+        "n": 192
+      },
+      "player_missing": 0.05017361111111111,
+      "final_x_error_px": {
+        "NOOP": 6.762009662164461,
+        "LEFT": 5.531734215217187,
+        "RIGHT": 6.200588212956633,
+        "FIRE": 5.683410991358685,
+        "LEFTFIRE": 6.2435825848558055,
+        "RIGHTFIRE": 4.9465953132265055
+      },
+      "idm": {
+        "move": 0.6848958333333334,
+        "fire": 0.5549479166666667,
+        "n": 11520
+      },
+      "seconds": 53.83717676997185
+    }
+  }
+}
