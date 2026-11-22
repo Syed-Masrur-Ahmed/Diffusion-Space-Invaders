@@ -1,0 +1,39 @@
+{
+  "model": "copy_last",
+  "split": "val",
+  "n": 2048,
+  "val_windows": 268143,
+  "min_step": 60,
+  "eligible_windows": 249522,
+  "dataset_dirs": [
+    "/dartfs-hpc/scratch/f0079km/wm/data/full"
+  ],
+  "K": 4,
+  "C": 3,
+  "num_steps": null,
+  "cfg_scale": null,
+  "seed": 0,
+  "device": "cuda",
+  "seconds": 6.658866469049826,
+  "metrics": {
+    "psnr": {
+      "mean": 34.14037390379235,
+      "std": 15.968729305745097,
+      "ci95": 0.6916103027152632,
+      "n": 2048,
+      "capped_fraction": 0.05126953125
+    },
+    "ssim": {
+      "mean": 0.9656883659481537,
+      "std": 0.036519409301125315,
+      "ci95": 0.001581666220157358,
+      "n": 2048
+    },
+    "lpips": {
+      "mean": 0.011635953847265235,
+      "std": 0.014221988727208918,
+      "ci95": 0.0006159584610967938,
+      "n": 2048
+    }
+  }
+}
