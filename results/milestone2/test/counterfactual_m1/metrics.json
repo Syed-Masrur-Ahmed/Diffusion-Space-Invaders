@@ -1,0 +1,506 @@
+{
+  "config": {
+    "models": [
+      "copy_last"
+    ],
+    "dataset_dirs": [
+      "/dartfs-hpc/scratch/f0079km/wm/data/test"
+    ],
+    "n": 64,
+    "horizon": 30,
+    "min_step": 32,
+    "branch_seed": 0,
+    "margin_px": 2.0,
+    "fire_window": 3,
+    "K": 4,
+    "grayscale": false,
+    "ctx_levels": [
+      0
+    ],
+    "num_steps": null,
+    "cfg_scale": null,
+    "seed": 0,
+    "batch_size": 32,
+    "idm": "runs/idm/idm.pt",
+    "calibrate": true,
+    "strip_branches": 3,
+    "strip_steps": [
+      0,
+      5,
+      10,
+      20,
+      30
+    ],
+    "out_dir": "results/milestone2/test/counterfactual_m1"
+  },
+  "programs": [
+    "NOOP",
+    "LEFT",
+    "RIGHT",
+    "FIRE",
+    "LEFTFIRE",
+    "RIGHTFIRE"
+  ],
+  "device": "cuda",
+  "calibration": {
+    "slope": 0.5246962708354687,
+    "intercept": 0.8018825309707028,
+    "mae_px": 0.3048747891726022,
+    "max_err_px": 43.583747989787895,
+    "n": 37161,
+    "n_no_player": 2005
+  },
+  "branches": [
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 0,
+      "t": 226,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 2,
+      "t": 151,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 3,
+      "t": 207,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 5,
+      "t": 223,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 6,
+      "t": 202,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 8,
+      "t": 284,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 9,
+      "t": 257,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 11,
+      "t": 318,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 13,
+      "t": 156,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 14,
+      "t": 38,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 16,
+      "t": 39,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 17,
+      "t": 37,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 19,
+      "t": 335,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 20,
+      "t": 95,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 22,
+      "t": 163,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 24,
+      "t": 369,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 25,
+      "t": 120,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 27,
+      "t": 185,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 28,
+      "t": 204,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 30,
+      "t": 141,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 31,
+      "t": 239,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 33,
+      "t": 49,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 0,
+      "t": 236,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 1,
+      "t": 257,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 3,
+      "t": 168,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 4,
+      "t": 142,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 6,
+      "t": 38,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 7,
+      "t": 305,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 9,
+      "t": 291,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 11,
+      "t": 346,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 12,
+      "t": 145,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 14,
+      "t": 48,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 15,
+      "t": 357,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 17,
+      "t": 214,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 18,
+      "t": 299,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 20,
+      "t": 332,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 22,
+      "t": 41,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 23,
+      "t": 93,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 25,
+      "t": 328,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 26,
+      "t": 37,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 28,
+      "t": 92,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 29,
+      "t": 40,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 31,
+      "t": 165,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 33,
+      "t": 60,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 34,
+      "t": 72,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w002_00000.h5",
+      "episode": 1,
+      "t": 126,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w002_00000.h5",
+      "episode": 2,
+      "t": 262,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w002_00000.h5",
+      "episode": 4,
+      "t": 329,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w002_00000.h5",
+      "episode": 5,
+      "t": 52,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w002_00000.h5",
+      "episode": 7,
+      "t": 78,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w002_00000.h5",
+      "episode": 9,
+      "t": 242,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w002_00000.h5",
+      "episode": 10,
+      "t": 55,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w002_00000.h5",
+      "episode": 12,
+      "t": 128,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w002_00000.h5",
+      "episode": 13,
+      "t": 36,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w003_00000.h5",
+      "episode": 0,
+      "t": 130,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w003_00000.h5",
+      "episode": 1,
+      "t": 109,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w003_00000.h5",
+      "episode": 3,
+      "t": 64,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w003_00000.h5",
+      "episode": 5,
+      "t": 102,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w003_00000.h5",
+      "episode": 6,
+      "t": 82,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w003_00000.h5",
+      "episode": 8,
+      "t": 170,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w003_00000.h5",
+      "episode": 9,
+      "t": 98,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w003_00000.h5",
+      "episode": 11,
+      "t": 116,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w003_00000.h5",
+      "episode": 12,
+      "t": 166,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w003_00000.h5",
+      "episode": 14,
+      "t": 113,
+      "laser_idle": true
+    }
+  ],
+  "results": {
+    "real": {
+      "ordering_accuracy": 0.640625,
+      "dx_per_step": {
+        "NOOP": -0.20587366692564238,
+        "LEFT": -0.5965030109961791,
+        "RIGHT": 0.33983744365833507,
+        "FIRE": -0.20587366692564238,
+        "LEFTFIRE": -0.5970748660357728,
+        "RIGHTFIRE": 0.33983744365833507
+      },
+      "fire_response": {
+        "p": 0.671875,
+        "n": 192
+      },
+      "no_fire_response": {
+        "p": 0.09375,
+        "n": 192
+      },
+      "player_missing": 0.0609375,
+      "ended": 0,
+      "seconds": 19.20783395296894,
+      "idm": {
+        "move": 0.6879340277777778,
+        "fire": 0.5709201388888889,
+        "n": 11520
+      }
+    },
+    "20261105-0558_debug_small_ckpt_last@ctx0": {
+      "model": "runs/20261105-0558_debug_small/checkpoints/ckpt_last.pt",
+      "ctx_level": 0,
+      "ordering_accuracy": 0.609375,
+      "ordering_accuracy_real_ordered": 0.926829268292683,
+      "n_real_ordered": 41,
+      "dx_per_step": {
+        "NOOP": 0.010620739203463665,
+        "LEFT": -0.37814540021308973,
+        "RIGHT": 0.46291329964204264,
+        "FIRE": 0.0027968197934819454,
+        "LEFTFIRE": -0.3893984634660808,
+        "RIGHTFIRE": 0.44544708986357434
+      },
+      "fire_response": {
+        "p": 0.6302083333333334,
+        "n": 192
+      },
+      "no_fire_response": {
+        "p": 0.09375,
+        "n": 192
+      },
+      "player_missing": 0.006336805555555556,
+      "final_x_error_px": {
+        "NOOP": 5.823881466356378,
+        "LEFT": 6.193925678156538,
+        "RIGHT": 5.15045505498025,
+        "FIRE": 5.5846779107123075,
+        "LEFTFIRE": 5.812266083953652,
+        "RIGHTFIRE": 4.679415885782313
+      },
+      "idm": {
+        "move": 0.6856770833333333,
+        "fire": 0.5576388888888889,
+        "n": 11520
+      },
+      "seconds": 30.57916969899088
+    }
+  }
+}
