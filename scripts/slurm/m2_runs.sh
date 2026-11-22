@@ -1,5 +1,5 @@
 #!/bin/bash
-# Submit the Milestone 2 jobs on Discovery (notebooks/milestone2.ipynb, E5-E8). Run from the repo root.
+# Submit the Milestone 2 jobs on Discovery (notebooks/milestone2.ipynb, E4-E9 and the test set). Run from the repo root.
 #
 #   DATA_ROOT=<scratch>/data DRY_RUN=1 bash scripts/slurm/m2_runs.sh all   # print, submit nothing
 #   DATA_ROOT=<scratch>/data bash scripts/slurm/m2_runs.sh data            # data/test + data stats (CPU)
@@ -7,6 +7,8 @@
 #   DATA_ROOT=<scratch>/data bash scripts/slurm/m2_runs.sh train           # R0, E5 placebo, E6, E7, E8 training runs
 #   DATA_ROOT=<scratch>/data bash scripts/slurm/m2_runs.sh eval            # E4: copy-last, M1, final on full val, step >= 60
 #   DATA_ROOT=<scratch>/data bash scripts/slurm/m2_runs.sh posteval        # E5-E8 evals of every finished training run
+#   DATA_ROOT=<scratch>/data bash scripts/slurm/m2_runs.sh e9              # E9 error analysis (events, memorization)
+#   DATA_ROOT=<scratch>/data bash scripts/slurm/m2_runs.sh test            # section 5: the one-time data/test evaluation
 #
 # posteval evaluates each run's ckpt_0050000.pt (the step file the trainer writes at train.steps; ckpt_last.pt
 # also exists after a time-limit stop) and skips unfinished runs and evals whose metrics.json already exists,
@@ -23,6 +25,9 @@
 # Settings: DATA_ROOT (required), PARTITION (gpuq), GRES (gpu:nvidia_l40s:1), CPU_PARTITION (standard),
 # TIME_SMALL (06:00:00), TIME_BASE (12:00:00), DRY_RUN=1, and for `eval` M1_CKPT and FINAL_CKPT (the CP3 and
 # CP5-B checkpoints, defaults below), for `posteval` IDM_CKPT and RUNS_DIR (runs).
+#
+# e9 and test use copy-last, R0 (test: all 3 seeds), X1 (the best one-change run) and the CP5 final model, and
+# need those runs finished. e9 runs on data/eval (validation); test is the one evaluation on data/test.
 set -euo pipefail
 : "${DATA_ROOT:?set DATA_ROOT=<scratch>/data (holds full/ and eval/)}"
 PARTITION=${PARTITION:-gpuq}
@@ -90,9 +95,9 @@ train_jobs() {
   train x4_base "$TIME_BASE" --set 'model.ch=[128,256,384]'   # E8 X4 (base width, batch 64 like R0)
 }
 
-gpu_eval() {  # gpu_eval <command>: one eval.sbatch job (eval.sbatch execs CMD, so one command per job)
+gpu_eval() {  # gpu_eval <command> [time]: one eval.sbatch job (eval.sbatch execs CMD, so one command per job)
   [ "$DRY_RUN" = 1 ] && echo "CMD=\"$1\" \\" >&2
-  CMD=$1 run sbatch --parsable --partition="$PARTITION" --gres="$GRES" --time=01:00:00 scripts/slurm/eval.sbatch
+  CMD=$1 run sbatch --parsable --partition="$PARTITION" --gres="$GRES" --time="${2:-01:00:00}" scripts/slurm/eval.sbatch
 }
 
 single_step() {  # single_step <model> <out_dir> [--set ...]: the E4 windows (full val, target step >= 60)
@@ -151,12 +156,59 @@ post_eval_jobs() {
 --set out_dir=results/milestone2/counterfactual"
 }
 
+need_ckpt() {  # need_ckpt <name>: a finished run's checkpoint; stops the script if the run is not finished
+  local ckpt
+  ckpt=$(finished_ckpt "$1")
+  if [ -z "$ckpt" ]; then
+    [ "$DRY_RUN" = 1 ] || { echo "error: m2_$1 has no $FINAL_STEP_FILE in $RUNS_DIR" >&2; exit 1; }
+    ckpt="$RUNS_DIR/<stamp>_m2_$1/checkpoints/$FINAL_STEP_FILE"
+  fi
+  echo "$ckpt"
+}
+
+e9_jobs() {
+  local r0 x1
+  r0=$(need_ckpt r0) x1=$(need_ckpt x1_aug)
+  [ "$DRY_RUN" = 1 ] || mkdir -p runs
+  gpu_eval "python scripts/m2_errors.py events --config configs/eval/m2_errors.yaml \
+--models copy_last $r0 $x1 $FINAL_CKPT --set 'dataset_dirs=[$DATA_ROOT/eval]'"
+  # nn reads every frame of the data/full train split (4.7M) once for all three models
+  gpu_eval "python scripts/m2_errors.py nn --config configs/eval/m2_errors.yaml --models $FINAL_CKPT $r0 $x1 \
+--set 'dataset_dirs=[$DATA_ROOT/eval]' --set 'nn.train_dirs=[$DATA_ROOT/full]'" 03:00:00
+}
+
+test_jobs() {  # every test eval writes under results/milestone2/test/; data/test is all held out (val_fraction 1)
+  local name ckpt models=() names=()
+  [ "$DRY_RUN" = 1 ] || mkdir -p runs
+  for name in r0 r0_seed1 r0_seed2 x1_aug; do
+    models+=("$(need_ckpt "$name")")
+    names+=("$name")
+  done
+  models+=("$FINAL_CKPT")
+  names+=(final)
+  single_step copy_last results/milestone2/test/single_step --set "'data.dataset_dirs=[$DATA_ROOT/test]'" \
+    --set data.val_fraction=1.0
+  rollouts copy_last results/milestone2/test/rollouts/copy_last --set "'dataset_dirs=[$DATA_ROOT/test]'" --set n_videos=0
+  for i in "${!models[@]}"; do
+    ckpt=${models[$i]}
+    single_step "$ckpt" results/milestone2/test/single_step --set "'data.dataset_dirs=[$DATA_ROOT/test]'" \
+      --set data.val_fraction=1.0
+    rollouts "$ckpt" "results/milestone2/test/rollouts/${names[$i]}" --set "'dataset_dirs=[$DATA_ROOT/test]'" \
+      --set n_videos=0
+  done
+  gpu_eval "python scripts/eval_counterfactual.py --config configs/eval/counterfactual.yaml \
+--models copy_last ${models[*]} --set 'dataset_dirs=[$DATA_ROOT/test]' --set idm=$IDM_CKPT \
+--set out_dir=results/milestone2/test/counterfactual"
+}
+
 case "${1:-}" in
   data) data_jobs ;;
   subsets) subsets ;;
   train) train_jobs ;;
   eval) eval_jobs ;;
   posteval) post_eval_jobs ;;
+  e9) e9_jobs ;;
+  test) test_jobs ;;
   all) data_jobs; subsets; train_jobs; eval_jobs ;;
-  *) echo "usage: $0 data|subsets|train|eval|posteval|all" >&2; exit 2 ;;
+  *) echo "usage: $0 data|subsets|train|eval|posteval|e9|test|all" >&2; exit 2 ;;
 esac
