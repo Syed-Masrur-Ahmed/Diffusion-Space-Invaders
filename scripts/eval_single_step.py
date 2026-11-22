@@ -33,6 +33,11 @@ def pick_indices(total: int, n: int) -> np.ndarray:
     return np.round(np.linspace(0, total - 1, n)).astype(np.int64)
 
 
+def eligible_indices(dataset: WindowDataset, min_step: int) -> np.ndarray:
+    """Indices of the windows whose target is at episode step >= min_step."""
+    return np.flatnonzero(dataset.target_steps() >= min_step)
+
+
 def evaluate(model: WorldModelProtocol, dataset: WindowDataset, indices: np.ndarray, metric_names: list[str],
              batch_size: int, device: torch.device, num_workers: int = 0, num_steps: int | None = None,
              cfg_scale: float | None = None, generator: torch.Generator | None = None) -> dict:
@@ -87,7 +92,10 @@ def run(spec: str, cfg: dict, n: int, device: torch.device) -> tuple[dict, dict]
     elif (model.H, model.W) != (H, W):
         raise ValueError(f"model frames are {model.H}x{model.W}, dataset frames are {H}x{W}")
 
-    indices = pick_indices(len(dataset), n)
+    # Episodes all start on the same screen, so early windows repeat across episodes (Milestone 2 leakage).
+    min_step = int(cfg.get("min_step", 0))
+    eligible = eligible_indices(dataset, min_step)
+    indices = eligible[pick_indices(len(eligible), n)]
     generator = torch.Generator().manual_seed(int(cfg["seed"]))  # CPU, so results match across devices
     start = time.perf_counter()
     out = evaluate(model, dataset, indices, list(cfg["metrics"]), int(data["batch_size"]), device,
@@ -98,6 +106,7 @@ def run(spec: str, cfg: dict, n: int, device: torch.device) -> tuple[dict, dict]
     if "psnr" in metrics:  # identical frames sit at the cap and pull the mean up
         metrics["psnr"]["capped_fraction"] = (out["values"]["psnr"] >= PSNR_CAP).double().mean().item()
     result = {"model": spec, "split": "val", "n": len(indices), "val_windows": len(dataset),
+              "min_step": min_step, "eligible_windows": len(eligible),
               "dataset_dirs": list(data["dataset_dirs"]), "K": K, "C": C, "num_steps": cfg["num_steps"],
               "cfg_scale": cfg["cfg_scale"], "seed": cfg["seed"], "device": str(device),
               "seconds": seconds, "metrics": metrics}

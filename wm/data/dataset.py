@@ -52,14 +52,17 @@ class WindowDataset(Dataset):
 
         want_val = split == "val"
         self._targets: list[np.ndarray] = []  # valid target rows per shard, int64
+        self._steps: list[np.ndarray] = []  # episode step of each target row
         frame_shapes = set()
         for path, reader in zip(self.shard_paths, self._readers):
             eps = reader.episodes
             frame_shapes.add(reader.read("frames", slice(0, 0)).shape[1:])
-            rows = [np.arange(s + K, s + n, dtype=np.int64)
-                    for s, n, uid in zip(eps["start"], eps["length"], eps["episode_uid"])
+            kept = [(int(s), int(n)) for s, n, uid in zip(eps["start"], eps["length"], eps["episode_uid"])
                     if n > K and is_val_episode(path.name, int(uid), val_fraction) == want_val]
+            rows = [np.arange(s + K, s + n, dtype=np.int64) for s, n in kept]
+            steps = [np.arange(K, n, dtype=np.int64) for _, n in kept]
             self._targets.append(np.concatenate(rows) if rows else np.zeros(0, np.int64))
+            self._steps.append(np.concatenate(steps) if steps else np.zeros(0, np.int64))
             reader.close()  # no HDF5 handle may stay open in the parent (pitfall 5)
         if len(frame_shapes) != 1:
             raise ValueError(f"shards have different frame shapes: {sorted(frame_shapes)}")
@@ -79,6 +82,10 @@ class WindowDataset(Dataset):
         """Close every shard handle; the next access reopens it in the calling process."""
         for reader in self._readers:
             reader.close()
+
+    def target_steps(self) -> np.ndarray:
+        """Episode step of every window's target, int64 (len(self),); step 0 is the reset frame."""
+        return np.concatenate(self._steps)
 
     def __len__(self) -> int:
         return int(self._offsets[-1])

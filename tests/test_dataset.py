@@ -263,3 +263,20 @@ def test_loader_num_workers_2_in_memory(shard_dir):
     cfg = make_cfg([shard_dir], num_workers=2, in_memory=True)
     rows = torch.cat([b["row"] for b in make_dataloader(cfg, "train")]).tolist()
     assert len(rows) == len(set(rows)) > 0
+
+
+@pytest.mark.parametrize("K", [1, 4])
+def test_target_steps_match_stored_step_in_episode(shard_dir, K):
+    """target_steps()[j] is the episode step of window j's target row (Milestone 2 E4 filter)."""
+    step_in_episode = ShardReader(next(shard_dir.glob("*.h5"))).read("step_in_episode", slice(None))
+    for ds in both_splits([shard_dir], K):
+        steps = ds.target_steps()
+        assert steps.shape == (len(ds),) and steps.dtype == np.int64 and steps.min() >= K
+        assert [int(steps[j]) for j in range(len(ds))] == [int(step_in_episode[int(ds[j]["row"])]) for j in range(len(ds))]
+
+
+def test_target_steps_across_two_dirs(two_dirs):
+    ds = WindowDataset(list(two_dirs), 4, "train", val_fraction=0.0)
+    readers = [ShardReader(p) for p in ds.shard_paths]
+    want = [int(readers[int(it["shard"])].read("step_in_episode", slice(None))[int(it["row"])]) for it in all_items(ds)]
+    assert ds.target_steps().tolist() == want

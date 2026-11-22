@@ -1,0 +1,696 @@
+{
+  "config": {
+    "models": [
+      "copy_last"
+    ],
+    "dataset_dirs": [
+      "/dartfs-hpc/scratch/f0079km/wm/data/test"
+    ],
+    "n": 64,
+    "horizon": 30,
+    "min_step": 32,
+    "branch_seed": 0,
+    "margin_px": 2.0,
+    "fire_window": 3,
+    "K": 4,
+    "grayscale": false,
+    "ctx_levels": [
+      0
+    ],
+    "num_steps": null,
+    "cfg_scale": null,
+    "seed": 0,
+    "batch_size": 32,
+    "idm": "runs/idm/idm.pt",
+    "calibrate": true,
+    "strip_branches": 3,
+    "strip_steps": [
+      0,
+      5,
+      10,
+      20,
+      30
+    ],
+    "out_dir": "results/milestone2/test/counterfactual"
+  },
+  "programs": [
+    "NOOP",
+    "LEFT",
+    "RIGHT",
+    "FIRE",
+    "LEFTFIRE",
+    "RIGHTFIRE"
+  ],
+  "device": "cuda",
+  "calibration": {
+    "slope": 0.5246962708354687,
+    "intercept": 0.8018825309707028,
+    "mae_px": 0.3048747891726022,
+    "max_err_px": 43.583747989787895,
+    "n": 37161,
+    "n_no_player": 2005
+  },
+  "branches": [
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 0,
+      "t": 226,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 2,
+      "t": 151,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 3,
+      "t": 207,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 5,
+      "t": 223,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 6,
+      "t": 202,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 8,
+      "t": 284,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 9,
+      "t": 257,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 11,
+      "t": 318,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 13,
+      "t": 156,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 14,
+      "t": 38,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 16,
+      "t": 39,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 17,
+      "t": 37,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 19,
+      "t": 335,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 20,
+      "t": 95,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 22,
+      "t": 163,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 24,
+      "t": 369,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 25,
+      "t": 120,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 27,
+      "t": 185,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 28,
+      "t": 204,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 30,
+      "t": 141,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 31,
+      "t": 239,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w000_00000.h5",
+      "episode": 33,
+      "t": 49,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 0,
+      "t": 236,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 1,
+      "t": 257,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 3,
+      "t": 168,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 4,
+      "t": 142,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 6,
+      "t": 38,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 7,
+      "t": 305,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 9,
+      "t": 291,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 11,
+      "t": 346,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 12,
+      "t": 145,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 14,
+      "t": 48,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 15,
+      "t": 357,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 17,
+      "t": 214,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 18,
+      "t": 299,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 20,
+      "t": 332,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 22,
+      "t": 41,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 23,
+      "t": 93,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 25,
+      "t": 328,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 26,
+      "t": 37,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 28,
+      "t": 92,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 29,
+      "t": 40,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 31,
+      "t": 165,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 33,
+      "t": 60,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w001_00000.h5",
+      "episode": 34,
+      "t": 72,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w002_00000.h5",
+      "episode": 1,
+      "t": 126,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w002_00000.h5",
+      "episode": 2,
+      "t": 262,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w002_00000.h5",
+      "episode": 4,
+      "t": 329,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w002_00000.h5",
+      "episode": 5,
+      "t": 52,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w002_00000.h5",
+      "episode": 7,
+      "t": 78,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w002_00000.h5",
+      "episode": 9,
+      "t": 242,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w002_00000.h5",
+      "episode": 10,
+      "t": 55,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w002_00000.h5",
+      "episode": 12,
+      "t": 128,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w002_00000.h5",
+      "episode": 13,
+      "t": 36,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w003_00000.h5",
+      "episode": 0,
+      "t": 130,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w003_00000.h5",
+      "episode": 1,
+      "t": 109,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w003_00000.h5",
+      "episode": 3,
+      "t": 64,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w003_00000.h5",
+      "episode": 5,
+      "t": 102,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w003_00000.h5",
+      "episode": 6,
+      "t": 82,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w003_00000.h5",
+      "episode": 8,
+      "t": 170,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w003_00000.h5",
+      "episode": 9,
+      "t": 98,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w003_00000.h5",
+      "episode": 11,
+      "t": 116,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w003_00000.h5",
+      "episode": 12,
+      "t": 166,
+      "laser_idle": true
+    },
+    {
+      "shard": "/dartfs-hpc/scratch/f0079km/wm/data/test/shard_w003_00000.h5",
+      "episode": 14,
+      "t": 113,
+      "laser_idle": true
+    }
+  ],
+  "results": {
+    "real": {
+      "ordering_accuracy": 0.640625,
+      "dx_per_step": {
+        "NOOP": -0.20587366692564238,
+        "LEFT": -0.5965030109961791,
+        "RIGHT": 0.33983744365833507,
+        "FIRE": -0.20587366692564238,
+        "LEFTFIRE": -0.5970748660357728,
+        "RIGHTFIRE": 0.33983744365833507
+      },
+      "fire_response": {
+        "p": 0.671875,
+        "n": 192
+      },
+      "no_fire_response": {
+        "p": 0.09375,
+        "n": 192
+      },
+      "player_missing": 0.0609375,
+      "ended": 0,
+      "seconds": 19.25323389400728,
+      "idm": {
+        "move": 0.6879340277777778,
+        "fire": 0.5709201388888889,
+        "n": 11520
+      }
+    },
+    "copy_last": {
+      "model": "copy_last",
+      "ctx_level": 0,
+      "ordering_accuracy": 0.0,
+      "ordering_accuracy_real_ordered": 0.0,
+      "n_real_ordered": 41,
+      "dx_per_step": {
+        "NOOP": 0.0,
+        "LEFT": 0.0,
+        "RIGHT": 0.0,
+        "FIRE": 0.0,
+        "LEFTFIRE": 0.0,
+        "RIGHTFIRE": 0.0
+      },
+      "fire_response": {
+        "p": 0.09375,
+        "n": 192
+      },
+      "no_fire_response": {
+        "p": 0.09375,
+        "n": 192
+      },
+      "player_missing": 0.0,
+      "final_x_error_px": {
+        "NOOP": 5.770691590641608,
+        "LEFT": 16.837322212560313,
+        "RIGHT": 19.415502302615963,
+        "FIRE": 5.770691590641608,
+        "LEFTFIRE": 16.854128935249392,
+        "RIGHTFIRE": 19.415502302615963
+      },
+      "idm": {
+        "move": 0.3333333333333333,
+        "fire": 0.5,
+        "n": 11520
+      },
+      "seconds": 1.77101742697414
+    },
+    "20261120-1753_m2_r0_ckpt_0050000@ctx0": {
+      "model": "runs/20261120-1753_m2_r0/checkpoints/ckpt_0050000.pt",
+      "ctx_level": 0,
+      "ordering_accuracy": 0.671875,
+      "ordering_accuracy_real_ordered": 0.975609756097561,
+      "n_real_ordered": 41,
+      "dx_per_step": {
+        "NOOP": -0.022690406591911103,
+        "LEFT": -0.42475057611348627,
+        "RIGHT": 0.4565336750454242,
+        "FIRE": -0.03598182839507831,
+        "LEFTFIRE": -0.4122644382323682,
+        "RIGHTFIRE": 0.4572848020929901
+      },
+      "fire_response": {
+        "p": 0.578125,
+        "n": 192
+      },
+      "no_fire_response": {
+        "p": 0.09375,
+        "n": 192
+      },
+      "player_missing": 0.021527777777777778,
+      "final_x_error_px": {
+        "NOOP": 4.778560780706939,
+        "LEFT": 5.229107383181034,
+        "RIGHT": 5.502248244215003,
+        "FIRE": 4.883974803279943,
+        "LEFTFIRE": 5.494288194709221,
+        "RIGHTFIRE": 4.610635913929462
+      },
+      "idm": {
+        "move": 0.6941840277777778,
+        "fire": 0.5673611111111111,
+        "n": 11520
+      },
+      "seconds": 21.072301286039874
+    },
+    "20261120-2017_m2_r0_seed1_ckpt_0050000@ctx0": {
+      "model": "runs/20261120-2017_m2_r0_seed1/checkpoints/ckpt_0050000.pt",
+      "ctx_level": 0,
+      "ordering_accuracy": 0.59375,
+      "ordering_accuracy_real_ordered": 0.926829268292683,
+      "n_real_ordered": 41,
+      "dx_per_step": {
+        "NOOP": -0.011437281953995784,
+        "LEFT": -0.4031442926662881,
+        "RIGHT": 0.4653504317143827,
+        "FIRE": -0.0003234899461030883,
+        "LEFTFIRE": -0.4104988469452371,
+        "RIGHTFIRE": 0.4555947336969374
+      },
+      "fire_response": {
+        "p": 0.65625,
+        "n": 192
+      },
+      "no_fire_response": {
+        "p": 0.09375,
+        "n": 192
+      },
+      "player_missing": 0.018142361111111113,
+      "final_x_error_px": {
+        "NOOP": 5.733251532890559,
+        "LEFT": 5.59203928538652,
+        "RIGHT": 4.602209427938612,
+        "FIRE": 5.3926345498326915,
+        "LEFTFIRE": 4.852190091099961,
+        "RIGHTFIRE": 4.34009724094456
+      },
+      "idm": {
+        "move": 0.68671875,
+        "fire": 0.5701388888888889,
+        "n": 11520
+      },
+      "seconds": 21.073319032089785
+    },
+    "20261120-2032_m2_r0_seed2_ckpt_0050000@ctx0": {
+      "model": "runs/20261120-2032_m2_r0_seed2/checkpoints/ckpt_0050000.pt",
+      "ctx_level": 0,
+      "ordering_accuracy": 0.609375,
+      "ordering_accuracy_real_ordered": 0.9512195121951219,
+      "n_real_ordered": 41,
+      "dx_per_step": {
+        "NOOP": -0.006475761023900972,
+        "LEFT": -0.3673878214544601,
+        "RIGHT": 0.45281910095239336,
+        "FIRE": -0.0018921520999210628,
+        "LEFTFIRE": -0.3742765381545899,
+        "RIGHTFIRE": 0.4648201579190245
+      },
+      "fire_response": {
+        "p": 0.6354166666666666,
+        "n": 192
+      },
+      "no_fire_response": {
+        "p": 0.09375,
+        "n": 192
+      },
+      "player_missing": 0.005729166666666666,
+      "final_x_error_px": {
+        "NOOP": 5.853994004583842,
+        "LEFT": 5.958576401122447,
+        "RIGHT": 4.546479027182562,
+        "FIRE": 5.503350686107022,
+        "LEFTFIRE": 5.846326933985012,
+        "RIGHTFIRE": 4.457380739985557
+      },
+      "idm": {
+        "move": 0.6980902777777778,
+        "fire": 0.5630208333333333,
+        "n": 11520
+      },
+      "seconds": 21.12784238194581
+    },
+    "20261121-0120_m2_x1_aug_ckpt_0050000@ctx0": {
+      "model": "runs/20261121-0120_m2_x1_aug/checkpoints/ckpt_0050000.pt",
+      "ctx_level": 0,
+      "ordering_accuracy": 0.640625,
+      "ordering_accuracy_real_ordered": 1.0,
+      "n_real_ordered": 41,
+      "dx_per_step": {
+        "NOOP": -0.0007519916775189669,
+        "LEFT": -0.38071217366951926,
+        "RIGHT": 0.4626451379162776,
+        "FIRE": 0.005360201143688464,
+        "LEFTFIRE": -0.3789751964487718,
+        "RIGHTFIRE": 0.4392932427287077
+      },
+      "fire_response": {
+        "p": 0.6197916666666666,
+        "n": 192
+      },
+      "no_fire_response": {
+        "p": 0.09375,
+        "n": 192
+      },
+      "player_missing": 0.002690972222222222,
+      "final_x_error_px": {
+        "NOOP": 5.853849489543066,
+        "LEFT": 6.178444355738131,
+        "RIGHT": 4.4976444934203235,
+        "FIRE": 5.622250208439009,
+        "LEFTFIRE": 6.441974619166726,
+        "RIGHTFIRE": 4.050675835972623
+      },
+      "idm": {
+        "move": 0.6940972222222223,
+        "fire": 0.5540798611111111,
+        "n": 11520
+      },
+      "seconds": 21.156049167970195
+    },
+    "20261118-0501_final_ckpt_last@ctx0": {
+      "model": "runs/20261118-0501_final/checkpoints/ckpt_last.pt",
+      "ctx_level": 0,
+      "ordering_accuracy": 0.640625,
+      "ordering_accuracy_real_ordered": 1.0,
+      "n_real_ordered": 41,
+      "dx_per_step": {
+        "NOOP": 0.003969013820806096,
+        "LEFT": -0.35863317814117407,
+        "RIGHT": 0.4610355369761209,
+        "FIRE": 0.00397693248890413,
+        "LEFTFIRE": -0.3722078071857992,
+        "RIGHTFIRE": 0.4665251671654173
+      },
+      "fire_response": {
+        "p": 0.6614583333333334,
+        "n": 192
+      },
+      "no_fire_response": {
+        "p": 0.09375,
+        "n": 192
+      },
+      "player_missing": 0.0036458333333333334,
+      "final_x_error_px": {
+        "NOOP": 5.5368480606634565,
+        "LEFT": 5.1218736855432025,
+        "RIGHT": 4.420837539595083,
+        "FIRE": 5.219759851606417,
+        "LEFTFIRE": 5.531438485295992,
+        "RIGHTFIRE": 4.572796137485621
+      },
+      "idm": {
+        "move": 0.6902777777777778,
+        "fire": 0.5665798611111111,
+        "n": 11520
+      },
+      "seconds": 53.5623207440367
+    }
+  }
+}

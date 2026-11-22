@@ -1,0 +1,157 @@
+{
+  "config": "configs/train/debug.yaml",
+  "data_root": "/dartfs-hpc/scratch/f0079km/wm/data",
+  "train_dirs": [
+    "full"
+  ],
+  "holdout": [
+    "eval",
+    "test"
+  ],
+  "K": 4,
+  "val_fraction": 0.05,
+  "splits": {
+    "train": {
+      "episodes": 6022,
+      "rows": 4736880,
+      "windows": 4712792,
+      "sources": {
+        "agent": 4293,
+        "random": 1729
+      },
+      "actions": {
+        "NOOP": 543644,
+        "FIRE": 701241,
+        "RIGHT": 645634,
+        "LEFT": 686454,
+        "RIGHTFIRE": 1248078,
+        "LEFTFIRE": 905807
+      },
+      "action_share": {
+        "NOOP": 0.11491446160506191,
+        "FIRE": 0.14822702351243686,
+        "RIGHT": 0.13647291886588014,
+        "LEFT": 0.14510137484574678,
+        "RIGHTFIRE": 0.26381641554238155,
+        "LEFTFIRE": 0.19146780562849275
+      },
+      "seed_range": [
+        300000000,
+        930000113
+      ]
+    },
+    "val": {
+      "episodes": 333,
+      "rows": 269475,
+      "windows": 268143,
+      "sources": {
+        "agent": 239,
+        "random": 94
+      },
+      "actions": {
+        "NOOP": 30988,
+        "FIRE": 39828,
+        "RIGHT": 36085,
+        "LEFT": 38506,
+        "RIGHTFIRE": 71999,
+        "LEFTFIRE": 51736
+      },
+      "action_share": {
+        "NOOP": 0.11513624777998231,
+        "FIRE": 0.14798136299797132,
+        "RIGHT": 0.13407420618112373,
+        "LEFT": 0.14306945775835805,
+        "RIGHTFIRE": 0.267513060020361,
+        "LEFTFIRE": 0.19222566526220358
+      },
+      "seed_range": [
+        300000003,
+        930000080
+      ]
+    },
+    "eval": {
+      "episodes": 100,
+      "rows": 39860,
+      "windows": 39460,
+      "sources": {
+        "agent": 70,
+        "random": 30
+      },
+      "actions": {
+        "NOOP": 4464,
+        "FIRE": 6113,
+        "RIGHT": 5886,
+        "LEFT": 4657,
+        "RIGHTFIRE": 11403,
+        "LEFTFIRE": 7237
+      },
+      "action_share": {
+        "NOOP": 0.11227364185110664,
+        "FIRE": 0.15374748490945675,
+        "RIGHT": 0.14803822937625755,
+        "LEFT": 0.11712776659959759,
+        "RIGHTFIRE": 0.2867957746478873,
+        "LEFTFIRE": 0.18201710261569418
+      },
+      "seed_range": [
+        1000000000,
+        1030000014
+      ]
+    },
+    "test": {
+      "episodes": 100,
+      "rows": 39166,
+      "windows": 38766,
+      "sources": {
+        "agent": 70,
+        "random": 30
+      },
+      "actions": {
+        "NOOP": 4330,
+        "FIRE": 6098,
+        "RIGHT": 5768,
+        "LEFT": 4620,
+        "RIGHTFIRE": 11064,
+        "LEFTFIRE": 7186
+      },
+      "action_share": {
+        "NOOP": 0.11083806890902576,
+        "FIRE": 0.15609481390467414,
+        "RIGHT": 0.14764757077765833,
+        "LEFT": 0.11826140377822147,
+        "RIGHTFIRE": 0.28321302411303945,
+        "LEFTFIRE": 0.18394511851738085
+      },
+      "seed_range": [
+        1500000000,
+        1530000014
+      ]
+    }
+  },
+  "leakage": {
+    "val": {
+      "shared_seeds": 0,
+      "frames": 269475,
+      "frames_identical_to_a_train_frame": 23692,
+      "windows": 268143,
+      "windows_identical_to_a_train_window": 14189,
+      "unique_frames_in_split": 235248
+    },
+    "eval": {
+      "shared_seeds": 0,
+      "frames": 39860,
+      "frames_identical_to_a_train_frame": 6079,
+      "windows": 39460,
+      "windows_identical_to_a_train_window": 3801,
+      "unique_frames_in_split": 33324
+    },
+    "test": {
+      "shared_seeds": 0,
+      "frames": 39166,
+      "frames_identical_to_a_train_frame": 6582,
+      "windows": 38766,
+      "windows_identical_to_a_train_window": 4027,
+      "unique_frames_in_split": 32515
+    }
+  }
+}

@@ -1,0 +1,17 @@
+$ python scripts/validate_data.py /dartfs-hpc/scratch/f0079km/wm/data/full
+rows: 5006355
+episodes: 6355
+  agent: 4532 episodes, 4004532 rows
+  random: 1823 episodes, 1001823 rows
+  human: 0 episodes, 0 rows
+mean episode length: 787.8 rows
+action histogram:
+  NOOP           574632   11.5%
+  FIRE           741069   14.8%
+  RIGHT          681719   13.6%
+  LEFT           724960   14.5%
+  RIGHTFIRE     1320077   26.4%
+  LEFTFIRE       957543   19.2%
+disk size: 7162.29 MiB
+compression ratio (uncompressed frame bytes / file bytes): 14.11
+OK: all invariants hold

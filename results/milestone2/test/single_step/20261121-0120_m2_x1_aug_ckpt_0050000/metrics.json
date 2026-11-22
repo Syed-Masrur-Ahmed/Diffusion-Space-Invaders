@@ -1,0 +1,39 @@
+{
+  "model": "runs/20261121-0120_m2_x1_aug/checkpoints/ckpt_0050000.pt",
+  "split": "val",
+  "n": 2048,
+  "val_windows": 38766,
+  "min_step": 60,
+  "eligible_windows": 33166,
+  "dataset_dirs": [
+    "/dartfs-hpc/scratch/f0079km/wm/data/test"
+  ],
+  "K": 4,
+  "C": 3,
+  "num_steps": null,
+  "cfg_scale": null,
+  "seed": 0,
+  "device": "cuda",
+  "seconds": 6.268084704992361,
+  "metrics": {
+    "psnr": {
+      "mean": 36.772206951864064,
+      "std": 6.336191463147824,
+      "ci95": 0.27442229196739854,
+      "n": 2048,
+      "capped_fraction": 0.0
+    },
+    "ssim": {
+      "mean": 0.9065313159371726,
+      "std": 0.03275533781014075,
+      "ci95": 0.0014186431909934065,
+      "n": 2048
+    },
+    "lpips": {
+      "mean": 0.006447964055318778,
+      "std": 0.011952747248379969,
+      "ci95": 0.0005176769537797222,
+      "n": 2048
+    }
+  }
+}
