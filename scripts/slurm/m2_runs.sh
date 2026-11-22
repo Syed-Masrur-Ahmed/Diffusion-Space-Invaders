@@ -1,5 +1,5 @@
 #!/bin/bash
-# Submit the Milestone 2 jobs on Discovery (notebooks/milestone2.ipynb, E4-E9 and the test set). Run from the repo root.
+# Submit the Milestone 2 jobs on Discovery (notebooks/radiant_descent_milestone2.ipynb, E4-E9 and the test set). Run from the repo root.
 #
 #   DATA_ROOT=<scratch>/data DRY_RUN=1 bash scripts/slurm/m2_runs.sh all   # print, submit nothing
 #   DATA_ROOT=<scratch>/data bash scripts/slurm/m2_runs.sh data            # data/test + data stats (CPU)

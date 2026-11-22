@@ -243,7 +243,7 @@ to see what already exists.
   into `wm/data/ram.py` is a small follow-up for its owner.
 - `base` trains at ~171 samples/s on one L40S (200k steps × batch 128 ≈ 42 h).
 
-**Milestone 2 (merged 2026-11-22, tag `milestone2`; `notebooks/milestone2.ipynb`, results in `results/milestone2/`):**
+**Milestone 2 (merged 2026-11-22, tag `milestone2`; `notebooks/radiant_descent_milestone2.ipynb`, results in `results/milestone2/`):**
 
 Course milestone, run between CP5 and CP6. Every run is `configs/train/debug.yaml` (small, 50k steps, batch 64)
 on `data/full` with one change; jobs in `scripts/slurm/m2_runs.sh`.
