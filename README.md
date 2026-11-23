@@ -3,18 +3,19 @@
 An action-conditioned diffusion world model of Atari Space Invaders. See `ROADMAP.md` for the plan
 and `CLAUDE.md` for how to work in this repo.
 
-## Milestone 1
+## Milestone 2
 
-Milestone 1 compares a baseline, **copy-last-frame** (0 parameters), with a simple model, the
-**`small` EDM U-Net** (14,263,683 parameters, 20k training steps), on the same 64 held-out val
-windows. Everything is in `notebooks/milestone1.ipynb`; saved results are in `results/milestone1/`.
+Milestone 2 moves to the full 5M-step dataset, checks the training pipeline (E1-E5), runs
+one-change experiments (E6-E8), evaluates once on a new 100-episode test set, and analyses the
+errors (E9). Everything is in `notebooks/radiant_descent_milestone2.ipynb`; saved results are in
+`results/milestone2/`.
 
 **1. Get the code**
 
 ```bash
 git clone https://github.com/Syed-Masrur-Ahmed/Diffusion-Space-Invaders.git
 cd Diffusion-Space-Invaders
-git checkout milestone1
+git checkout milestone2
 ```
 
 **2. Install.** Use **Python 3.13**. `pyproject.toml` allows 3.13 and newer, but pygame has no
@@ -30,45 +31,26 @@ Then install PyTorch for your machine with the command from
 [pytorch.org](https://pytorch.org/get-started/locally/) (the default build on a laptop, the CUDA
 build on a GPU machine).
 
-**3. Download the checkpoint** (224 MB) from [Google Drive](https://drive.google.com/file/d/1bpBC0tTF5uZGqE2Mz3wMtQYqJqwFfAKY/view?usp=sharing) and save it as
-`runs/20261105-0558_debug_small/checkpoints/ckpt_last.pt`:
+**3. Run the notebook.** No data, checkpoints or GPU are needed:
 
 ```bash
-mkdir -p runs/20261105-0558_debug_small/checkpoints
-# move the downloaded file to runs/20261105-0558_debug_small/checkpoints/ckpt_last.pt
+jupyter notebook notebooks/radiant_descent_milestone2.ipynb     # or, headless:
+jupyter nbconvert --to notebook --execute --inplace notebooks/radiant_descent_milestone2.ipynb
 ```
 
-**4. Get the data** (`data/debug/`, 740 MB, 12 HDF5 shards) from [Google Drive](https://drive.google.com/file/d/1SRgxvCyY3Drwo1DSyvv34Q1z6UBD5LgD/view?usp=drive_link) and unpack it so
-the shards are at `data/debug/shard_w*.h5`. Or regenerate it (about 10 minutes; downloads the
-agent policy from the Hugging Face Hub):
+Restart and Run All takes a few seconds on a laptop (about 3 s on an Apple laptop CPU). The
+training runs and the long evaluations (full dataset, test set, rollouts, counterfactuals, E9)
+ran on a GPU cluster, and the notebook loads their saved results from `results/milestone2/`.
+They can be re-run with `scripts/slurm/m2_runs.sh` (see the comments at its top), which needs
+the full dataset and a Slurm cluster.
 
-```bash
-python scripts/collect.py --config configs/data/debug.yaml --workers 4
-```
-
-Keep `--workers 4`: the shard names, and so the train/val split, depend on it. A regenerated
-dataset can still differ slightly from ours (for example with other library versions or
-hardware), so the numbers may not match `results/milestone1/` exactly and the notebook's
-match check can fail; the saved results are the reference.
-
-**5. Run the notebook**
-
-```bash
-jupyter notebook notebooks/milestone1.ipynb     # or, headless:
-jupyter nbconvert --to notebook --execute --inplace notebooks/milestone1.ipynb
-```
-
-With `RUN_EVAL = True` (the default) the notebook re-evaluates both models and checks that the
-numbers match the saved `results/milestone1/eval/*/metrics.json`. Measured on an Apple M3 laptop:
-25 s with MPS, 33 s on CPU (the notebook picks CUDA, then MPS, then CPU); expect around a minute on
-an older laptop CPU, and well under a minute on a CUDA GPU (not measured). Section 6 (memorization
-check) adds about 3 minutes on MPS or a GPU, where it fine-tunes the model on 20 training windows;
-on CPU it shows the saved run from `results/milestone1/memorize/` instead (set `MEMORIZE = True`
-to force it, 15 to 30 minutes). The first run also
-downloads the AlexNet weights for LPIPS (233 MB, needs internet).
-
-To run **without the data or the checkpoint**, set `RUN_EVAL = False` in the setup cell: the
-notebook then shows the saved metrics, grids, and training curve from `results/milestone1/`.
+**4. Optional: re-run the pipeline checks.** E1-E3 can be recomputed locally. They need the
+500k-step debug set (`data/debug/`, 740 MB) from
+[Google Drive](https://drive.google.com/file/d/1SRgxvCyY3Drwo1DSyvv34Q1z6UBD5LgD/view?usp=drive_link),
+unpacked so the shards are at `data/debug/shard_w*.h5`, or regenerated with
+`python scripts/collect.py --config configs/data/debug.yaml --workers 4` (about 10 minutes).
+Then set `RUN_CHECKS = True` in the setup cell. They are slow on a laptop: E2 takes about 7 minutes
+on CPU and E3 about 1 hour on Apple MPS.
 
 ## Setup
 
