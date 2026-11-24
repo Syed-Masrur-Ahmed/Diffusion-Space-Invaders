@@ -1,0 +1,50 @@
+[
+  {
+    "name": "fresh_game_1",
+    "dataset": "data/debug",
+    "shard": "shard_w000_00000.h5",
+    "row": 32
+  },
+  {
+    "name": "fresh_game_2",
+    "dataset": "data/debug",
+    "shard": "shard_w011_00000.h5",
+    "row": 31273
+  },
+  {
+    "name": "few_invaders_1",
+    "dataset": "data/debug",
+    "shard": "shard_w000_00000.h5",
+    "row": 971
+  },
+  {
+    "name": "few_invaders_2",
+    "dataset": "data/debug",
+    "shard": "shard_w009_00000.h5",
+    "row": 8615
+  },
+  {
+    "name": "ufo_1",
+    "dataset": "data/debug",
+    "shard": "shard_w000_00000.h5",
+    "row": 478
+  },
+  {
+    "name": "ufo_2",
+    "dataset": "data/debug",
+    "shard": "shard_w011_00000.h5",
+    "row": 28704
+  },
+  {
+    "name": "one_life_1",
+    "dataset": "data/debug",
+    "shard": "shard_w000_00000.h5",
+    "row": 1343
+  },
+  {
+    "name": "one_life_2",
+    "dataset": "data/debug",
+    "shard": "shard_w011_00000.h5",
+    "row": 31195
+  }
+]

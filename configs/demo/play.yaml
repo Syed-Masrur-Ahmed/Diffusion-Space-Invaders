@@ -1,0 +1,16 @@
+# Playable demo: play Space Invaders inside the world model (ROADMAP CP6-B).
+# python scripts/play_model.py --ckpt runs/<run>/checkpoints/ckpt_last.pt
+ckpt: null                  # checkpoint path, or copy_last (--ckpt overrides)
+scenarios: demo/scenarios.json
+scenario: 0                 # index of the scenario to start from (keys 1-9 switch)
+hz: 15                      # target ticks per second (15 = real game speed); runs slower if sampling can't keep up
+num_steps: null             # sampler steps; null = the checkpoint's default (Euler 2, D11). +/- change it
+max_steps: 10
+ctx_level: 0                # inference context-noise level (D22)
+cfg_scale: null             # action CFG weight; null = the checkpoint's default (1, D11)
+seed: 0                     # sampler noise generator
+scale: 4                    # nearest upscaling for display
+widen: 1                    # extra horizontal stretch, display only (2 gives the game's aspect)
+side_by_side: false         # also run the real emulator from the same scenario with the same keys
+device: null                # null = cuda, then mps, then cpu
+K: 4                        # copy_last only; a checkpoint's own K is used otherwise

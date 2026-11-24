@@ -1,0 +1,12 @@
+# Starting scenarios for the playable demo (ROADMAP CP6-B).
+# python scripts/make_scenarios.py --config configs/demo/scenarios.yaml
+dataset_dirs: [data/debug]  # downloadable (README); seeds disjoint from data/full, so the final model never saw
+                            # these games. data/eval never gets below 12 aliens, so it has no few_invaders rows.
+K: 4                        # context frames per scenario (the final model's K)
+per_type: 2                 # scenarios per type, from different episodes spread over the dataset
+min_future: 30              # the episode must go on for this many steps after the scenario row (side-by-side mode)
+fresh_step: 32              # fresh_game starts here: past the game's start-up steps after reset
+max_invaders: 6             # few_invaders: 1..max_invaders aliens left (RAM)
+ufo_lead: 5                 # ufo: start this many steps before the UFO appears
+one_life_settle: 30         # one_life: steps after the last life starts, so the respawn is over
+out: demo/scenarios.json
